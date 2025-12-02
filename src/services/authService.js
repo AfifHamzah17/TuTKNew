@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // PASTIKAN PORT ANDA BENAR! Sesuaikan dengan backend yang berjalan.
-const API_URL = 'http://localhost:8080/api'; 
+const API_URL = 'https://tutk-307703218179.asia-southeast2.run.app/api'; 
 
 // Set token ke header axios
 const setAuthHeader = (token) => {
