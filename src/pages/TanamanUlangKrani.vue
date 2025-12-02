@@ -1053,16 +1053,16 @@ export default {
     currentUser() {
       try {
         const userStr = localStorage.getItem('user');
-        console.log('=== DEBUG: Raw user string from localStorage ===', userStr);
+        // // console.log('=== DEBUG: Raw user string from localStorage ===', userStr);
         
         if (!userStr) {
-          console.log('=== DEBUG: Tidak ada string user di localStorage ===');
+          // // console.log('=== DEBUG: Tidak ada string user di localStorage ===');
           return {};
         }
 
         const user = JSON.parse(userStr);
-        console.log('=== DEBUG: Parsed user object ===', user);
-        console.log('=== DEBUG: User token exists? ===', !!user.token);
+        // // console.log('=== DEBUG: Parsed user object ===', user);
+        // // console.log('=== DEBUG: User token exists? ===', !!user.token);
         return user;
       } catch (error) {
         console.error('=== ERROR: Gagal parsing user dari localStorage ===', error);
@@ -1071,7 +1071,7 @@ export default {
     },
     isLoggedIn() {
       const loggedIn = this.currentUser && this.currentUser.token;
-      console.log('=== DEBUG: isLoggedIn computed result ===', loggedIn);
+      // // console.log('=== DEBUG: isLoggedIn computed result ===', loggedIn);
       return loggedIn;
     },
     maxPreviousDate() {
@@ -1240,19 +1240,19 @@ export default {
     },
     
     async fetchData() {
-      console.log('=== DEBUG: Metode fetchData dipanggil ===');
-      console.log('=== DEBUG: Nilai isLoggedIn saat ini ===', this.isLoggedIn);
+      // // console.log('=== DEBUG: Metode fetchData dipanggil ===');
+      // // console.log('=== DEBUG: Nilai isLoggedIn saat ini ===', this.isLoggedIn);
       
       if (!this.isLoggedIn) {
         this.errorData = 'Anda belum login. Silakan login terlebih dahulu.';
-        console.log('=== DEBUG: Pengguna tidak login, proses fetchData dibatalkan ===');
+        // // console.log('=== DEBUG: Pengguna tidak login, proses fetchData dibatalkan ===');
         return;
       }
       
       this.isLoadingData = true;
       this.errorData = '';
       try {
-        console.log('=== DEBUG: Memanggil getDataTU dari service ===');
+        // // console.log('=== DEBUG: Memanggil getDataTU dari service ===');
         
         // Karena filtering sekarang dilakukan di client-side, kita ambil semua data
         const response = await getDataTU();
@@ -1266,8 +1266,8 @@ export default {
     },
     
     async getNextSequenceNumber() {
-      console.log('=== DEBUG: Metode getNextSequenceNumber dipanggil ===');
-      console.log('=== DEBUG: Nilai isLoggedIn saat ini ===', this.isLoggedIn);
+      // // console.log('=== DEBUG: Metode getNextSequenceNumber dipanggil ===');
+      // // console.log('=== DEBUG: Nilai isLoggedIn saat ini ===', this.isLoggedIn);
 
       if (!this.isLoggedIn) {
         console.error('=== ERROR: Pengguna tidak login, tidak bisa mendapatkan nomor urut ===');
@@ -1276,7 +1276,7 @@ export default {
       }
       
       try {
-        console.log('=== DEBUG: Memanggil getNextSequence dari service ===');
+        // // console.log('=== DEBUG: Memanggil getNextSequence dari service ===');
         const response = await getNextSequence();
         this.formData.no = response.nextSequence;
       } catch (err) {
@@ -1485,7 +1485,7 @@ export default {
     },
     
     confirmDelete(docId) {
-      console.log('=== DEBUG: Konfirmasi hapus data dengan docId ===', docId);
+      // // console.log('=== DEBUG: Konfirmasi hapus data dengan docId ===', docId);
       
       if (!docId || docId === 'null' || docId === 'undefined') {
         Toastify({
@@ -1510,7 +1510,7 @@ export default {
     },
     
     async deleteDataConfirmed() {
-      console.log('=== DEBUG: Menghapus data dengan docId ===', this.deleteDocId);
+      // // console.log('=== DEBUG: Menghapus data dengan docId ===', this.deleteDocId);
       
       if (!this.deleteDocId || this.deleteDocId === 'null' || this.deleteDocId === 'undefined') {
         Toastify({
@@ -1573,12 +1573,12 @@ export default {
     },
     
     async handleSubmit() {
-      console.log('=== DEBUG: Metode handleSubmit dipanggil ===');
-      console.log('=== DEBUG: Nilai isLoggedIn saat ini ===', this.isLoggedIn);
+      // // console.log('=== DEBUG: Metode handleSubmit dipanggil ===');
+      // // console.log('=== DEBUG: Nilai isLoggedIn saat ini ===', this.isLoggedIn);
       
       if (!this.isLoggedIn) {
         this.errorData = 'Anda belum login. Silakan login terlebih dahulu.';
-        console.log('=== DEBUG: Pengguna tidak login, proses handleSubmit dibatalkan ===');
+        // // console.log('=== DEBUG: Pengguna tidak login, proses handleSubmit dibatalkan ===');
         return;
       }
       
@@ -2284,12 +2284,12 @@ export default {
   },
   
   async created() {
-    console.log('=== DEBUG: Komponen TanamanUlangKrani dibuat ===');
-    console.log('=== DEBUG: Memeriksa status login saat ini... ===');
+    // // console.log('=== DEBUG: Komponen TanamanUlangKrani dibuat ===');
+    // // console.log('=== DEBUG: Memeriksa status login saat ini... ===');
     
     if (!this.isLoggedIn) {
       this.errorData = 'Anda belum login. Silakan login terlebih dahulu.';
-      console.log('=== DEBUG: Tidak ada sesi login, redirect ke halaman login ===');
+      // // console.log('=== DEBUG: Tidak ada sesi login, redirect ke halaman login ===');
       this.$router.push('/login');
       return;
     }

@@ -653,19 +653,19 @@ export default {
   computed: {
     // Filter data berdasarkan filter yang dipilih
     filteredData() {
-      console.log('🔍 [filteredData] Menghitung filtered data...');
-      console.log('  - Total raw data:', this.rawData?.length || 0);
-      console.log('  - Selected date:', this.selectedDate);
-      console.log('  - Current date ISO:', this.currentDateISO);
-      console.log('  - Filters:', this.filters);
+      // console.log('🔍 [filteredData] Menghitung filtered data...');
+      // console.log('  - Total raw data:', this.rawData?.length || 0);
+      // console.log('  - Selected date:', this.selectedDate);
+      // console.log('  - Current date ISO:', this.currentDateISO);
+      // console.log('  - Filters:', this.filters);
       
       if (!this.rawData || !this.rawData.length) {
-        console.log('⚠️ [filteredData] Tidak ada raw data');
+        // console.log('⚠️ [filteredData] Tidak ada raw data');
         return [];
       }
       
       const filterDate = this.selectedDate || this.currentDateISO;
-      console.log('  - Filter date yang digunakan:', filterDate);
+      // console.log('  - Filter date yang digunakan:', filterDate);
       
       const result = this.rawData.filter(row => {
         // Filter tanggal - default hari ini
@@ -732,16 +732,16 @@ export default {
         return true;
       });
       
-      console.log('✅ [filteredData] Filtered data dihitung');
-      console.log('  - Jumlah filtered data:', result.length);
+      // console.log('✅ [filteredData] Filtered data dihitung');
+      // console.log('  - Jumlah filtered data:', result.length);
       
       if (result.length > 0) {
-        console.log('  - Sample filtered data:', {
-          kebun: result[0].kebun,
-          afdeling: result[0].afdeling,
-          progressOverall: result[0].progressOverall,
-          tanggal: result[0].tanggal
-        });
+        // console.log('  - Sample filtered data:', {
+        //   kebun: result[0].kebun,
+        //   afdeling: result[0].afdeling,
+        //   progressOverall: result[0].progressOverall,
+        //   tanggal: result[0].tanggal
+        // });
       }
       
       return result;
@@ -845,22 +845,22 @@ export default {
     },
     
     filteredAvgProgress() {
-      console.log('📊 [filteredAvgProgress] Menghitung rata-rata progress...');
-      console.log('  - Jumlah filtered data:', this.filteredData?.length || 0);
+      // console.log('📊 [filteredAvgProgress] Menghitung rata-rata progress...');
+      // console.log('  - Jumlah filtered data:', this.filteredData?.length || 0);
       
       if (!this.filteredData || !this.filteredData.length) {
-        console.log('⚠️ [filteredAvgProgress] Tidak ada filtered data');
+        // console.log('⚠️ [filteredAvgProgress] Tidak ada filtered data');
         return 0;
       }
       
       const totalProgress = this.filteredData.reduce((total, row) => {
         const progress = parseFloat(row.progressOverall) || 0;
-        console.log(`    - Progress ${row.kebun} ${row.afdeling}: ${progress}%`);
+        // console.log(`    - Progress ${row.kebun} ${row.afdeling}: ${progress}%`);
         return total + progress;
       }, 0);
       
       const avgProgress = totalProgress / this.filteredData.length;
-      console.log('✅ [filteredAvgProgress] Rata-rata progress dihitung:', avgProgress.toFixed(2) + '%');
+      // console.log('✅ [filteredAvgProgress] Rata-rata progress dihitung:', avgProgress.toFixed(2) + '%');
       
       return avgProgress;
     },
@@ -872,41 +872,41 @@ export default {
     },
     
     filteredAvgProgressYesterday() {
-      console.log('📊 [filteredAvgProgressYesterday] Menghitung rata-rata progress kemarin...');
-      console.log('  - Jumlah progress data yesterday:', this.progressDataYesterday?.length || 0);
+      // console.log('📊 [filteredAvgProgressYesterday] Menghitung rata-rata progress kemarin...');
+      // console.log('  - Jumlah progress data yesterday:', this.progressDataYesterday?.length || 0);
       
       if (!this.progressDataYesterday || !this.progressDataYesterday.length) {
-        console.log('⚠️ [filteredAvgProgressYesterday] Tidak ada progress data yesterday');
+        // console.log('⚠️ [filteredAvgProgressYesterday] Tidak ada progress data yesterday');
         return 0;
       }
       
       const filteredYesterdayData = this.progressDataYesterday.filter(row => {
         if (this.filters.kebun && row.kebun !== this.filters.kebun) {
-          console.log(`    - Skip ${row.kebun} (filter kebun: ${this.filters.kebun})`);
+          // console.log(`    - Skip ${row.kebun} (filter kebun: ${this.filters.kebun})`);
           return false;
         }
         if (this.filters.namaVendor && row.namaVendor !== this.filters.namaVendor) {
-          console.log(`    - Skip ${row.namaVendor} (filter vendor: ${this.filters.namaVendor})`);
+          // console.log(`    - Skip ${row.namaVendor} (filter vendor: ${this.filters.namaVendor})`);
           return false;
         }
         return true;
       });
       
-      console.log('  - Jumlah filtered yesterday data:', filteredYesterdayData.length);
+      // console.log('  - Jumlah filtered yesterday data:', filteredYesterdayData.length);
       
       if (!filteredYesterdayData.length) {
-        console.log('⚠️ [filteredAvgProgressYesterday] Tidak ada filtered yesterday data');
+        // console.log('⚠️ [filteredAvgProgressYesterday] Tidak ada filtered yesterday data');
         return 0;
       }
       
       const totalProgress = filteredYesterdayData.reduce((total, row) => {
         const progress = parseFloat(row.progressOverall) || 0;
-        console.log(`    - Progress kemarin ${row.kebun} ${row.afdeling}: ${progress}%`);
+        // console.log(`    - Progress kemarin ${row.kebun} ${row.afdeling}: ${progress}%`);
         return total + progress;
       }, 0);
       
       const avgProgress = totalProgress / filteredYesterdayData.length;
-      console.log('✅ [filteredAvgProgressYesterday] Rata-rata progress kemarin dihitung:', avgProgress.toFixed(2) + '%');
+      // console.log('✅ [filteredAvgProgressYesterday] Rata-rata progress kemarin dihitung:', avgProgress.toFixed(2) + '%');
       
       return avgProgress;
     },
@@ -916,13 +916,13 @@ export default {
     },
     
     filteredProgressChange() {
-      console.log('📈 [filteredProgressChange] Menghitung perubahan progress...');
-      console.log('  - Progress hari ini:', this.filteredAvgProgress.toFixed(2) + '%');
-      console.log('  - Progress kemarin:', this.filteredAvgProgressYesterday.toFixed(2) + '%');
+      // console.log('📈 [filteredProgressChange] Menghitung perubahan progress...');
+      // console.log('  - Progress hari ini:', this.filteredAvgProgress.toFixed(2) + '%');
+      // console.log('  - Progress kemarin:', this.filteredAvgProgressYesterday.toFixed(2) + '%');
       
       // Jika sudah dihitung sebelumnya, kembalikan nilai yang sudah ada
       if (this.progressCalculated && this.lastCalculatedProgressChange !== null) {
-        console.log('✅ [filteredProgressChange] Menggunakan nilai yang sudah dihitung:', this.lastCalculatedProgressChange);
+        // console.log('✅ [filteredProgressChange] Menggunakan nilai yang sudah dihitung:', this.lastCalculatedProgressChange);
         return this.lastCalculatedProgressChange;
       }
       
@@ -932,7 +932,7 @@ export default {
       this.lastCalculatedProgressChange = change;
       this.progressCalculated = true;
       
-      console.log('✅ [filteredProgressChange] Perubahan progress dihitung:', change.toFixed(2) + '%');
+      // console.log('✅ [filteredProgressChange] Perubahan progress dihitung:', change.toFixed(2) + '%');
       
       return change;
     },
@@ -1576,7 +1576,7 @@ radarChartData() {
   methods: {
     // Metode untuk mereset flag perhitungan progress
     resetProgressCalculation() {
-      console.log('🔄 [resetProgressCalculation] Mereset flag perhitungan progress');
+      // console.log('🔄 [resetProgressCalculation] Mereset flag perhitungan progress');
       this.progressCalculated = false;
       this.lastCalculatedProgressChange = null;
       this.formattedProgressChange = null;
@@ -1664,7 +1664,7 @@ formatProgressChange(value) {
     },
     
     exportToExcelHandler() {
-      console.log('Exporting raw data:', this.rawData);
+      // console.log('Exporting raw data:', this.rawData);
       exportToExcel(this.rawData);
     },
     
@@ -1684,28 +1684,28 @@ formatProgressChange(value) {
         const filterDate = this.selectedDate || this.currentDateISO;
         params.tanggal = filterDate;
         
-        console.log('🔄 [fetchData] Mengambil data untuk tanggal:', filterDate);
+        // console.log('🔄 [fetchData] Mengambil data untuk tanggal:', filterDate);
         
         const response = await getDataTU(params);
         
         // Debug log untuk melihat struktur response
-        console.log('📊 [fetchData] Full response from API:', response);
-        console.log('📊 [fetchData] Response data:', response.data);
+        // console.log('📊 [fetchData] Full response from API:', response);
+        // console.log('📊 [fetchData] Response data:', response.data);
         
         // Perbaikan: Pastikan kita mengambil data dengan benar
         this.rawData = response.data || response;
         
         // Debug log untuk melihat data yang disimpan
-        console.log('💾 [fetchData] Raw data after assignment:', this.rawData);
-        console.log('📊 [fetchData] Jumlah data yang diambil:', this.rawData?.length || 0);
+        // console.log('💾 [fetchData] Raw data after assignment:', this.rawData);
+        // console.log('📊 [fetchData] Jumlah data yang diambil:', this.rawData?.length || 0);
         
         // Debug log untuk melihat tanggal yang diformat
         if (this.rawData && this.rawData.length > 0) {
-          console.log('📅 [fetchData] Sample data pertama:');
-          console.log('  - Tanggal:', this.rawData[0].tanggal);
-          console.log('  - Tanggal formatted:', this.formatDateForComparison(this.rawData[0].tanggal));
-          console.log('  - Progress Overall:', this.rawData[0].progressOverall);
-          console.log('  - Sample progress data:', this.rawData[0].pembuatanParit);
+          // console.log('📅 [fetchData] Sample data pertama:');
+          // console.log('  - Tanggal:', this.rawData[0].tanggal);
+          // console.log('  - Tanggal formatted:', this.formatDateForComparison(this.rawData[0].tanggal));
+          // console.log('  - Progress Overall:', this.rawData[0].progressOverall);
+          // console.log('  - Sample progress data:', this.rawData[0].pembuatanParit);
         }
         
         // Save current data for comparison
@@ -1716,7 +1716,7 @@ formatProgressChange(value) {
           await this.loadComparisonData();
         }
         
-        console.log('✅ [fetchData] Data berhasil diambil dan disimpan');
+        // console.log('✅ [fetchData] Data berhasil diambil dan disimpan');
       } catch (err) {
         this.errorData = err.response?.data?.message || 'Gagal mengambil data.';
         console.error('Error fetching data:', err);
@@ -1727,9 +1727,9 @@ formatProgressChange(value) {
     
     // Metode untuk menangani perubahan filter tanggal
     async handleDateFilter() {
-      console.log('🔄 [handleDateFilter] Filter tanggal diubah');
-      console.log('  - Selected date:', this.selectedDate);
-      console.log('  - Current date ISO:', this.currentDateISO);
+      // console.log('🔄 [handleDateFilter] Filter tanggal diubah');
+      // console.log('  - Selected date:', this.selectedDate);
+      // console.log('  - Current date ISO:', this.currentDateISO);
       
       // Reset flag perhitungan progress
       this.resetProgressCalculation();
@@ -1739,12 +1739,12 @@ formatProgressChange(value) {
       // Save current data before fetching new data
       if (!this.selectedDate) {
         // If clearing date filter, save today's data for comparison
-        console.log('💾 [handleDateFilter] Menyimpan data hari ini untuk perbandingan');
+        // console.log('💾 [handleDateFilter] Menyimpan data hari ini untuk perbandingan');
         this.comparisonData = [...this.rawData];
-        console.log('📊 [handleDateFilter] Comparison data set:', this.comparisonData?.length || 0);
+        // console.log('📊 [handleDateFilter] Comparison data set:', this.comparisonData?.length || 0);
       } else {
         // If selecting a date, load today's data for comparison
-        console.log('📥 [handleDateFilter] Memuat data hari ini untuk perbandingan');
+        // console.log('📥 [handleDateFilter] Memuat data hari ini untuk perbandingan');
         await this.loadTodayDataForComparison();
       }
       
@@ -1753,7 +1753,7 @@ formatProgressChange(value) {
     
     // Metode untuk menghapus filter tanggal
     async clearDateFilter() {
-      console.log('🔄 [clearDateFilter] Filter tanggal dihapus');
+      // console.log('🔄 [clearDateFilter] Filter tanggal dihapus');
       this.selectedDate = null;
       
       // Reset flag perhitungan progress
@@ -1762,7 +1762,7 @@ formatProgressChange(value) {
       this.resetPagination();
       
       // Load today's data for comparison
-      console.log('📥 [clearDateFilter] Memuat data hari ini untuk perbandingan');
+      // console.log('📥 [clearDateFilter] Memuat data hari ini untuk perbandingan');
       await this.loadTodayDataForComparison();
       
       this.fetchData();
@@ -1771,22 +1771,22 @@ formatProgressChange(value) {
     // Metode untuk memuat data hari ini untuk perbandingan
     async loadTodayDataForComparison() {
       try {
-        console.log('📥 [loadTodayDataForComparison] Memuat data hari ini...');
+        // console.log('📥 [loadTodayDataForComparison] Memuat data hari ini...');
         const params = { tanggal: this.currentDateISO };
-        console.log('  - Params:', params);
+        // console.log('  - Params:', params);
         
         const response = await getDataTU(params);
         this.comparisonData = response.data || response;
         
-        console.log('✅ [loadTodayDataForComparison] Data hari ini berhasil dimuat');
-        console.log('  - Jumlah data:', this.comparisonData?.length || 0);
+        // console.log('✅ [loadTodayDataForComparison] Data hari ini berhasil dimuat');
+        // console.log('  - Jumlah data:', this.comparisonData?.length || 0);
         
         if (this.comparisonData && this.comparisonData.length > 0) {
-          console.log('  - Sample data comparison:', {
-            kebun: this.comparisonData[0].kebun,
-            afdeling: this.comparisonData[0].afdeling,
-            progressOverall: this.comparisonData[0].progressOverall
-          });
+          // console.log('  - Sample data comparison:', {
+          //   kebun: this.comparisonData[0].kebun,
+          //   afdeling: this.comparisonData[0].afdeling,
+          //   progressOverall: this.comparisonData[0].progressOverall
+          // });
         }
       } catch (err) {
         console.error('❌ [loadTodayDataForComparison] Error loading today\'s data for comparison:', err);
@@ -1934,16 +1934,16 @@ formatProgressChange(value) {
     // Metode untuk localStorage
     saveProgressDataToStorage() {
       if (!this.rawData || !this.rawData.length) {
-        console.log('⚠️ [saveProgressDataToStorage] Tidak ada data untuk disimpan');
+        // console.log('⚠️ [saveProgressDataToStorage] Tidak ada data untuk disimpan');
         return;
       }
       
       const today = new Date().toISOString().split('T')[0];
       const storageKey = `progressData_${today}`;
       
-      console.log('💾 [saveProgressDataToStorage] Menyimpan data ke localStorage');
-      console.log('  - Storage key:', storageKey);
-      console.log('  - Jumlah data:', this.rawData.length);
+      // console.log('💾 [saveProgressDataToStorage] Menyimpan data ke localStorage');
+      // console.log('  - Storage key:', storageKey);
+      // console.log('  - Jumlah data:', this.rawData.length);
       
       // Extract relevant progress data
       const progressData = this.rawData.map(row => ({
@@ -1966,7 +1966,7 @@ formatProgressChange(value) {
       }));
       
       localStorage.setItem(storageKey, JSON.stringify(progressData));
-      console.log('✅ [saveProgressDataToStorage] Data berhasil disimpan ke localStorage');
+      // console.log('✅ [saveProgressDataToStorage] Data berhasil disimpan ke localStorage');
     },
     
     loadProgressDataFromStorage() {
@@ -1977,23 +1977,23 @@ formatProgressChange(value) {
       const yesterdayStr = yesterday.toISOString().split('T')[0];
       const storageKey = `progressData_${yesterdayStr}`;
       
-      console.log('📥 [loadProgressDataFromStorage] Mencoba memuat data kemarin dari localStorage');
-      console.log('  - Storage key:', storageKey);
+      // console.log('📥 [loadProgressDataFromStorage] Mencoba memuat data kemarin dari localStorage');
+      // console.log('  - Storage key:', storageKey);
       
       const storedData = localStorage.getItem(storageKey);
       
       if (storedData) {
         try {
           this.progressDataYesterday = JSON.parse(storedData);
-          console.log('✅ [loadProgressDataFromStorage] Data kemarin berhasil dimuat');
-          console.log('  - Jumlah data:', this.progressDataYesterday.length);
+          // console.log('✅ [loadProgressDataFromStorage] Data kemarin berhasil dimuat');
+          // console.log('  - Jumlah data:', this.progressDataYesterday.length);
           
           if (this.progressDataYesterday.length > 0) {
-            console.log('  - Sample data kemarin:', {
-              kebun: this.progressDataYesterday[0].kebun,
-              afdeling: this.progressDataYesterday[0].afdeling,
-              progressOverall: this.progressDataYesterday[0].progressOverall
-            });
+            // console.log('  - Sample data kemarin:', {
+            //   kebun: this.progressDataYesterday[0].kebun,
+            //   afdeling: this.progressDataYesterday[0].afdeling,
+            //   progressOverall: this.progressDataYesterday[0].progressOverall
+            // });
           }
           
           return true;
@@ -2001,7 +2001,7 @@ formatProgressChange(value) {
           console.error('❌ [loadProgressDataFromStorage] Error parsing stored progress data:', err);
         }
       } else {
-        console.log('⚠️ [loadProgressDataFromStorage] Tidak ada data kemarin di localStorage');
+        // console.log('⚠️ [loadProgressDataFromStorage] Tidak ada data kemarin di localStorage');
       }
       
       return false;
@@ -2009,7 +2009,7 @@ formatProgressChange(value) {
   },
   watch: {
     filteredData() {
-      console.log('🔄 [watch:filteredData] Data berubah, mereset flag perhitungan');
+      // console.log('🔄 [watch:filteredData] Data berubah, mereset flag perhitungan');
       this.resetProgressCalculation();
       this.resetPagination();
       
@@ -2023,9 +2023,9 @@ formatProgressChange(value) {
       }
     },
     filteredProgressChange(newValue) {
-      console.log('📈 [watch:filteredProgressChange] Perubahan progress...');
-      console.log('  - Progress hari ini:', this.filteredAvgProgress.toFixed(2) + '%');
-      console.log('  - Progress kemarin:', this.filteredAvgProgressYesterday.toFixed(2) + '%');
+      // console.log('📈 [watch:filteredProgressChange] Perubahan progress...');
+      // console.log('  - Progress hari ini:', this.filteredAvgProgress.toFixed(2) + '%');
+      // console.log('  - Progress kemarin:', this.filteredAvgProgressYesterday.toFixed(2) + '%');
       
       // Hitung ulang perubahan
       const change = this.filteredAvgProgress - this.filteredAvgProgressYesterday;
@@ -2037,16 +2037,16 @@ formatProgressChange(value) {
       // Format perubahan progress
       this.formattedProgressChange = this.formatProgressChange(change);
       
-      console.log('✅ [watch:filteredProgressChange] Perubahan progress dihitung:', change.toFixed(2) + '%');
+      // console.log('✅ [watch:filteredProgressChange] Perubahan progress dihitung:', change.toFixed(2) + '%');
       
       return change;
     },
     formattedProgressChange(newVal) {
-      console.log('🎨 [formattedProgressChange] Memformat perubahan progress...');
-      console.log('  - Input change:', newVal);
+      // console.log('🎨 [formattedProgressChange] Memformat perubahan progress...');
+      // console.log('  - Input change:', newVal);
       
       if (newVal === null || newVal === undefined || isNaN(newVal)) {
-        console.log('⚠️ [formattedProgressChange] Change tidak valid, mengembalikan 0%');
+        // console.log('⚠️ [formattedProgressChange] Change tidak valid, mengembalikan 0%');
         this.formattedProgressChange = '0%';
         return '0%';
       }
@@ -2055,7 +2055,7 @@ formatProgressChange(value) {
       const sign = newVal >= 0 ? '+' : '-';
       const formatted = `${sign}${absChange.toFixed(1)}%`;
       
-      console.log('✅ [formattedProgressChange] Formatted change:', formatted);
+      // console.log('✅ [formattedProgressChange] Formatted change:', formatted);
       
       return formatted;
     }
