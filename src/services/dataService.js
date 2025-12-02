@@ -1,21 +1,19 @@
 // src/services/dataService.js
 import axios from 'axios';
+import router from '../router'; // PASTIKAN INI ADA
 
-// PERBAIKAN: Gunakan import.meta.env untuk Vite, bukan process.env untuk Webpack
-// Juga, Vite menggunakan prefix VITE_ bukan VUE_APP_
 const API_URL = 'https://tutk-307703218179.asia-southeast2.run.app/api';
 
-// Set up axios defaults
-axios.defaults.baseURL = API_URL;
+// --- Instance AXIOS YANG DIAUTENTIKASI (Untuk POST, PUT, DELETE) ---
+const api = axios.create({
+  baseURL: API_URL
+});
 
 // Fungsi untuk mendapatkan token dari localStorage
 const getToken = () => {
   try {
     const userStr = localStorage.getItem('user');
-    if (!userStr) {
-      console.log('No user found in localStorage');
-      return null;
-    }
+    if (!userStr) return null;
     const user = JSON.parse(userStr);
     return user.token;
   } catch (error) {
@@ -24,136 +22,92 @@ const getToken = () => {
   }
 };
 
-// Add request interceptor untuk otomatis menambahkan auth token ke setiap request
-axios.interceptors.request.use(
-  config => {
-    const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('Token attached to request:', token.substring(0, 20) + '...');
-    }
-    return config;
-  },
-  error => {
-    // Lakukan sesuatu dengan error request
-    console.error('Request interceptor error:', error);
-    return Promise.reject(error);
+// Request interceptor untuk instance yang diautentikasi
+api.interceptors.request.use(config => {
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+}, error => Promise.reject(error));
 
-// Add response interceptor untuk menangani error global (opsional, tapi direkomendasikan)
-axios.interceptors.response.use(
-  response => {
-    // Status kode 2xx akan masuk sini
-    return response;
-  },
+// Response interceptor untuk instance yang diautentikasi
+api.interceptors.response.use(
+  response => response,
   error => {
-    // Status kode di luar 2xx akan masuk sini
-    if (error.response) {
-      // Server merespons dengan status kode di luar 2xx
-      console.error('API Error Response:', error.response.data, error.response.status);
-      if (error.response.status === 401) {
-        // Token mungkin sudah kadaluarsa atau tidak valid
-        console.log('Unauthorized! Redirecting to login...');
-        localStorage.removeItem('user');
-        // Redirect ke halaman login jika bukan sudah di sana
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
+    if (error.response && error.response.status === 401) {
+      console.log('Unauthorized on protected route. Redirecting to login...');
+      localStorage.removeItem('user');
+      if (router.currentRoute.value.path !== '/login') {
+        router.push('/login');
       }
-    } else if (error.request) {
-      // Request dibuat tapi tidak ada respons
-      console.error('API No Response:', error.request);
-    } else {
-      // Terjadi kesalahan saat setting up request
-      console.error('API Setup Error:', error.message);
     }
-    
     return Promise.reject(error);
   }
 );
 
-// --- API SERVICE FUNCTIONS ---
+
+// --- Instance AXIOS PUBLIK (Hanya untuk GET data view) ---
+const publicApi = axios.create({
+  baseURL: API_URL
+});
+
+// Response interceptor untuk instance publik
+// JANGAN redirect pada error 401, biarkan komponen yang menangani
+publicApi.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401) {
+      console.log('Public API call returned 401. Not redirecting, component will handle.');
+    }
+    return Promise.reject(error);
+  }
+);
+
+
+// --- FUNGSI API YANG DIAUTENTIKASI (Menggunakan instance 'api') ---
+
+export const saveDataTU = async (data) => {
+  const response = await api.post('/data/tu', data);
+  return response.data;
+};
+
+export const updateDataTU = async (docId, data) => {
+  const response = await api.put(`/data/tu/${docId}`, data);
+  return response.data;
+};
+
+export const deleteDataTU = async (docId) => {
+  const response = await api.delete(`/data/tu/${docId}`);
+  return response.data;
+};
+
+export const getNextSequence = async () => {
+  const response = await api.get('/data/tu/next-sequence');
+  return response.data;
+};
+
+// --- FUNGSI API PUBLIK (Menggunakan instance 'publicApi') ---
 
 /**
- * Mengambil semua data Tanaman Ulang.
- * @param {Object} params - Parameter query untuk filter (contoh: { tanggal: '2023-11-18' })
+ * Mengambil data Tanaman Ulang secara publik (tanpa token).
+ * @param {Object} params - Parameter query untuk filter
+ * @returns {Promise<Array>} Array dari data Tanaman Ulang
+ */
+export const getPublicDataTU = async (params = {}) => {
+  const response = await publicApi.get('/data/tu', { params });
+  console.log('getPublicDataTU Response:', response.data);
+  return response.data;
+};
+
+/**
+ * Mengambil data Tanaman Ulang (memerlukan token).
+ * Fungsi ini tetap ada untuk bagian aplikasi lain yang memerlukan autentikasi.
+ * @param {Object} params - Parameter query untuk filter
  * @returns {Promise<Array>} Array dari data Tanaman Ulang
  */
 export const getDataTU = async (params = {}) => {
-  try {
-    const response = await axios.get('/data/tu', { params });
-    console.log('getDataTU Response:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Error getting data TU:', error);
-    // Lempar error agar bisa ditangani di komponen
-    throw error;
-  }
-};
-
-/**
- * Menyimpan data Tanaman Ulang baru.
- * @param {Object} data - Data yang akan disimpan
- * @returns {Promise<Object>} Data yang berhasil disimpan
- */
-export const saveDataTU = async (data) => {
-  try {
-    const response = await axios.post('/data/tu', data);
-    console.log('saveDataTU Response:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Error saving data TU:', error);
-    throw error;
-  }
-};
-
-/**
- * Memperbarui data Tanaman Ulang yang ada.
- * @param {string} docId - ID dokumen yang akan diperbarui
- * @param {Object} data - Data pembaruan
- * @returns {Promise<Object>} Data yang berhasil diperbarui
- */
-export const updateDataTU = async (docId, data) => {
-  try {
-    console.log('Updating document with ID:', docId);
-    const response = await axios.put(`/data/tu/${docId}`, data);
-    console.log('updateDataTU Response:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating data TU:', error);
-    throw error;
-  }
-};
-
-/**
- * Menghapus data Tanaman Ulang.
- * @param {string} docId - ID dokumen yang akan dihapus
- * @returns {Promise<Object>} Konfirmasi penghapusan
- */
-export const deleteDataTU = async (docId) => {
-  try {
-    console.log('Deleting document with ID:', docId);
-    const response = await axios.delete(`/data/tu/${docId}`);
-    console.log('deleteDataTU Response:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting data TU:', error);
-    throw error;
-  }
-};
-
-/**
- * Mendapatkan nomor urut berikutnya untuk user yang sedang login.
- * @returns {Promise<Object>} Objek berisi nextSequence
- */
-export const getNextSequence = async () => {
-  try {
-    const response = await axios.get('/data/tu/next-sequence');
-    console.log('getNextSequence Response:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Error getting next sequence:', error);
-    throw error;
-  }
+  const response = await api.get('/data/tu', { params });
+  console.log('getDataTU Response:', response.data);
+  return response.data;
 };

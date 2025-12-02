@@ -16,29 +16,30 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: Home,
-    meta: { requiresAuth: true }
+    component: Home
+    // PERUBAHAN: Hapus meta.requiresAuth agar halaman home dapat diakses tanpa login
   },
   {
     path: '/tanaman-ulang',
     name: 'TanamanUlang',
-    component: TanamanUlang,
-    meta: { requiresAuth: true }
+    component: TanamanUlang
+    // PERUBAHAN: Hapus meta.requiresAuth agar halaman dapat diakses tanpa login
   },
   {
     path: '/tanaman-ulang/view',
     name: 'TanamanUlangView',
     component: TanamanUlangView,
-    meta: { requiresAuth: true }
+    // PERBAIKAN: Tambahkan meta.requiresAuth: false secara eksplisit
+    meta: { requiresAuth: false }
   },
   {
     path: '/tanaman-konversi',
     name: 'TanamanKonversi',
-    component: TanamanKonversi,
-    meta: { requiresAuth: true }
+    component: TanamanKonversi
+    // PERUBAHAN: Hapus meta.requiresAuth agar halaman dapat diakses tanpa login
   },
   {
-    // Route baru untuk halaman input data oleh Krani
+    // Route ini tetap memerlukan autentikasi
     path: '/tanaman-ulang/input',
     name: 'InputTanamanUlang',
     component: TanamanUlangKrani,
@@ -84,23 +85,32 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // Mendapatkan status autentikasi dan data user dari localStorage
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isAuthenticated = user && user.token;
+  const isAuthenticated = !!localStorage.getItem('token'); // PERUBAHAN: Perbaikan cara cek autentikasi
   const isAdmin = user.role === 'admin';
+  
+  // PERBAIKAN: Tambahkan log untuk debugging
+  console.log('Navigation to:', to.path);
+  console.log('Is authenticated:', isAuthenticated);
+  console.log('Route meta:', to.meta);
   
   // Jika rute dituju memerlukan autentikasi dan pengguna belum login
   if (to.matched.some(record => record.meta.requiresAuth) && !isAuthenticated) {
+    console.log('Redirecting to login - requires auth');
     next('/login');
   } 
   // Jika rute dituju memerlukan admin dan pengguna bukan admin
   else if (to.matched.some(record => record.meta.requiresAdmin) && !isAdmin) {
+    console.log('Redirecting to home - requires admin');
     next('/');
   } 
   // Jika pengguna sudah login tapi mencoba akses halaman login/register
   else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
+    console.log('Redirecting to home - already logged in');
     next('/');
   }
   // Jika semua syarat terpenuhi, izinkan navigasi
   else {
+    console.log('Navigation allowed');
     next();
   }
 });

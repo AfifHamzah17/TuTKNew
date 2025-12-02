@@ -75,58 +75,55 @@ export default {
     togglePasswordVisibility() {
       this.showPassword = !this.showPassword;
     },
-    async handleLogin() {
-      this.isLoading = true;
-      this.error = '';
-      
-      try {
-        const credentials = {
-          email: this.email,
-          password: this.password
-        };
-        
-        // PERBAIKAN: Tangkap respons dari authService.login untuk mendapatkan data user
-        const response = await authService.login(credentials);
-        const { user } = response;
+async handleLogin() {
+  this.isLoading = true;
+  this.error = '';
+  
+  try {
+    const credentials = {
+      email: this.email,
+      password: this.password
+    };
+    
+    // PERBAIKAN: Tangkap respons dari authService.login untuk mendapatkan data user
+    const response = await authService.login(credentials);
+    const { user } = response;
 
-        // Tentukan path redirect berdasarkan role user
-        let redirectPath = '/'; // Default untuk user biasa
-        if (user.role === 'admin') {
-          redirectPath = '/admin';
-        }
-        
-        // Tampilkan notifikasi sukses yang dinamis
-        Toastify({
-          text: `Login berhasil! Mengalihkan ke ${user.role === 'admin' ? 'dashboard admin' : 'halaman utama'}...`,
-          duration: 3000,
-          gravity: "top",
-          position: "right",
-          style: {
-            background: "linear-gradient(to right, #00b09b, #96c93d)",
-          }
-        }).showToast();
-        
-        // Arahkan ke path yang sudah ditentukan
-        setTimeout(() => {
-            this.$router.push(redirectPath);
-        }, 1500);
-
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Login gagal. Periksa kembali kredensial Anda.';
-        Toastify({
-          text: this.error,
-          duration: 3000,
-          gravity: "top",
-          position: "right",
-          style: {
-            background: "linear-gradient(to right, #ff5f6d, #ffc371)",
-          }
-        }).showToast();
-        console.error(error);
-      } finally {
-        this.isLoading = false;
+    // PERUBAHAN: Semua user diarahkan ke halaman input data tanaman ulang
+    const redirectPath = '/tanaman-ulang/input';
+    
+    // Tampilkan notifikasi sukses
+    Toastify({
+      text: `Login berhasil! Mengalihkan ke halaman input data tanaman ulang...`,
+      duration: 3000,
+      gravity: "top",
+      position: "right",
+      style: {
+        background: "linear-gradient(to right, #00b09b, #96c93d)",
       }
-    }
+    }).showToast();
+    
+    // Arahkan ke path yang sudah ditentukan
+    setTimeout(() => {
+        this.$router.push(redirectPath);
+    }, 1500);
+
+  } catch (error) {
+    this.error = error.response?.data?.message || 'Login gagal. Periksa kembali kredensial Anda.';
+    Toastify({
+      text: this.error,
+      duration: 3000,
+      gravity: "top",
+      position: "right",
+      style: {
+        background: "linear-gradient(to right, #ff5f6d, #ffc371)",
+      }
+    }).showToast();
+    console.error(error);
+  } finally {
+    this.isLoading = false;
+  }
+}
   }
 };
 </script>

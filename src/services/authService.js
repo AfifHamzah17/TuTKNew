@@ -4,6 +4,22 @@ import axios from 'axios';
 // PASTIKAN PORT ANDA BENAR! Sesuaikan dengan backend yang berjalan.
 const API_URL = 'https://tutk-307703218179.asia-southeast2.run.app/api'; 
 
+// Event emitter untuk notifikasi perubahan status autentikasi
+const authEvents = {
+  listeners: {},
+  on(event, callback) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
+    }
+    this.listeners[event].push(callback);
+  },
+  emit(event, data) {
+    if (this.listeners[event]) {
+      this.listeners[event].forEach(callback => callback(data));
+    }
+  }
+};
+
 // Set token ke header axios
 const setAuthHeader = (token) => {
   if (token) {
@@ -66,6 +82,9 @@ export const login = async (credentials) => {
     // Set token ke header axios
     setAuthHeader(token);
     
+    // Emit event login
+    authEvents.emit('login', { token, user });
+    
     return response.data;
   } catch (error) {
     console.error('Error during login:', error);
@@ -95,6 +114,9 @@ export const logout = () => {
   
   // Hapus token dari header axios
   setAuthHeader(null);
+  
+  // Emit event logout
+  authEvents.emit('logout');
   
   return { success: true };
 };
@@ -128,3 +150,6 @@ export const createAdminUser = async (userData) => {
     throw error;
   }
 };
+
+// Export event emitter untuk digunakan di komponen lain
+export { authEvents };

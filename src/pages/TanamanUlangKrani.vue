@@ -6,7 +6,6 @@
       <p>Kebun: <strong>{{ currentUser.kebun }}</strong> | Krani: <strong>{{ currentUser.name }}</strong></p>
       <div class="nav-links">
         <router-link to="/tanaman-ulang/view" class="nav-link">Lihat Data</router-link>
-        <button @click="logout" class="btn btn-secondary">Logout</button>
       </div>
     </header>
 
@@ -200,6 +199,7 @@
         <div v-for="item in filteredDataList" :key="item.docId" class="data-card">
           <div class="card-header">
             <h3>{{ formatDate(item.tanggal) }}</h3>
+            <h3>{{ formatDate(item.kebun) }}</h3>
             <span class="badge">{{ item.afdeling }}</span>
           </div>
           <div class="card-body">
@@ -880,23 +880,29 @@
             <table>
               <thead>
                 <tr>
-                  <th>No. Urut</th>
+                  <th>No.Urut</th>
+                  <th>No.Kode</th>
                   <th>Kebun</th>
                   <th>Afdeling</th>
                   <th>Nama Vendor</th>
                   <th>Luas (Ha)</th>
                   <th>Progress (%)</th>
+                  <th>Tanggal SPPBJ</th>
+                  <th>Durasi Kerja</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(item, index) in excelData" :key="index" :class="{ 'error-row': item.error }">
+                  <td>{{ index + 1 }}</td>
                   <td>{{ item.no }}</td>
                   <td>{{ item.kebun }}</td>
                   <td>{{ item.afdeling }}</td>
                   <td>{{ item.namaVendor }}</td>
                   <td>{{ formatNumber(item.luas) }}</td>
                   <td>{{ formatNumber(item.progressOverall) }}</td>
+                  <td>{{ formatDate(item.tanggalSPPBJ) }}</td>
+                  <td>{{ calculateDurasiForDate(item.tanggalSPPBJ, excelImportDate) }}</td>
                   <td>
                     <span v-if="item.error" class="error-badge">{{ item.error }}</span>
                     <span v-else class="success-badge">Valid</span>
@@ -940,7 +946,6 @@
 
 <script>
 import { getDataTU, saveDataTU, updateDataTU, deleteDataTU, getNextSequence } from '../services/dataService';
-import { formatDate } from '../utils/dateUtils';
 import ProgressInput from '../components/ProgressInput.vue';
 import Toastify from 'toastify-js';
 import "toastify-js/src/toastify.css";
@@ -1053,16 +1058,8 @@ export default {
     currentUser() {
       try {
         const userStr = localStorage.getItem('user');
-        // // console.log('=== DEBUG: Raw user string from localStorage ===', userStr);
-        
-        if (!userStr) {
-          // // console.log('=== DEBUG: Tidak ada string user di localStorage ===');
-          return {};
-        }
-
+        if (!userStr) return {};
         const user = JSON.parse(userStr);
-        // // console.log('=== DEBUG: Parsed user object ===', user);
-        // // console.log('=== DEBUG: User token exists? ===', !!user.token);
         return user;
       } catch (error) {
         console.error('=== ERROR: Gagal parsing user dari localStorage ===', error);
@@ -1071,7 +1068,6 @@ export default {
     },
     isLoggedIn() {
       const loggedIn = this.currentUser && this.currentUser.token;
-      // // console.log('=== DEBUG: isLoggedIn computed result ===', loggedIn);
       return loggedIn;
     },
     maxPreviousDate() {
@@ -1203,8 +1199,6 @@ export default {
       }).showToast();
     },
 
-// ... (lanjutan dari bagian sebelumnya)
-
     resetFilters() {
       // Kembalikan filter ke nilai awal
       this.filters = {
@@ -1240,20 +1234,14 @@ export default {
     },
     
     async fetchData() {
-      // // console.log('=== DEBUG: Metode fetchData dipanggil ===');
-      // // console.log('=== DEBUG: Nilai isLoggedIn saat ini ===', this.isLoggedIn);
-      
       if (!this.isLoggedIn) {
         this.errorData = 'Anda belum login. Silakan login terlebih dahulu.';
-        // // console.log('=== DEBUG: Pengguna tidak login, proses fetchData dibatalkan ===');
         return;
       }
       
       this.isLoadingData = true;
       this.errorData = '';
       try {
-        // // console.log('=== DEBUG: Memanggil getDataTU dari service ===');
-        
         // Karena filtering sekarang dilakukan di client-side, kita ambil semua data
         const response = await getDataTU();
         this.dataList = response.data || response;
@@ -1266,9 +1254,6 @@ export default {
     },
     
     async getNextSequenceNumber() {
-      // // console.log('=== DEBUG: Metode getNextSequenceNumber dipanggil ===');
-      // // console.log('=== DEBUG: Nilai isLoggedIn saat ini ===', this.isLoggedIn);
-
       if (!this.isLoggedIn) {
         console.error('=== ERROR: Pengguna tidak login, tidak bisa mendapatkan nomor urut ===');
         this.formData.no = 1;
@@ -1276,7 +1261,6 @@ export default {
       }
       
       try {
-        // // console.log('=== DEBUG: Memanggil getNextSequence dari service ===');
         const response = await getNextSequence();
         this.formData.no = response.nextSequence;
       } catch (err) {
@@ -1362,6 +1346,113 @@ export default {
       } else {
         this.previousDateData.durasiKerja = 0;
       }
+    },
+    
+    // Fungsi khusus untuk parsing tanggal dari Excel
+    parseExcelDate(value) {
+      if (!value) return null;
+      
+      // Jika sudah dalam format YYYY-MM-DD
+      if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return new Date(value);
+      }
+      
+      // Konversi dari format DD/MM/YYYY atau DD-MM-YYYY
+      if (typeof value === 'string') {
+        const parts = value.split(/[\/-]/);
+        if (parts.length === 3) {
+          const day = parts[0].padStart(2, '0');
+          const month = parts[1].padStart(2, '0');
+          let year = parseInt(parts[2]);
+          
+          // Jika tahun kurang dari 100, tambahkan 2000
+          if (year < 100) {
+            year += 2000;
+          }
+          
+          return new Date(year, parseInt(month) - 1, parseInt(day));
+        }
+      }
+      
+      // Jika adalah objek Date
+      if (value instanceof Date) {
+        return value;
+      }
+      
+      // Jika adalah number (format serial date Excel)
+      if (typeof value === 'number') {
+        // Excel menyimpan tanggal sebagai jumlah hari sejak 1/1/1900
+        const excelEpoch = new Date(1900, 0, 1);
+        const daysOffset = value - 1; // Excel menganggap 1/1/1900 sebagai hari 1
+        const millisecondsOffset = daysOffset * 24 * 60 * 60 * 1000;
+        return new Date(excelEpoch.getTime() + millisecondsOffset);
+      }
+      
+      return null;
+    },
+    
+    // Fungsi khusus untuk format tanggal SPPBJ
+    formatSPPBJDate(dateValue) {
+      if (!dateValue) return '';
+      
+      let date;
+      if (dateValue && typeof dateValue === 'object' && dateValue._seconds !== undefined) {
+        date = new Date(dateValue._seconds * 1000 + dateValue._nanoseconds / 1000000);
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else {
+        date = this.parseExcelDate(dateValue);
+      }
+      
+      // Format ke YYYY-MM-DD untuk input date
+      if (date && !isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      return '';
+    },
+    
+    // Fungsi untuk format tanggal tampilan
+    formatDateForDisplay(dateValue) {
+      if (!dateValue) return '';
+      
+      let date;
+      if (dateValue && typeof dateValue === 'object' && dateValue._seconds !== undefined) {
+        date = new Date(dateValue._seconds * 1000 + dateValue._nanoseconds / 1000000);
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else {
+        date = this.parseExcelDate(dateValue);
+      }
+      
+      if (date && !isNaN(date.getTime())) {
+        return date.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        });
+      }
+      
+      return '';
+    },
+    
+    // Fungsi untuk menghitung durasi kerja
+    calculateDurasiForDate(tanggalSPPBJ, targetDate = null) {
+      if (!tanggalSPPBJ) return 0;
+      
+      // Parse tanggal SPPBJ
+      const sppbjDate = this.parseExcelDate(tanggalSPPBJ);
+      if (!sppbjDate || isNaN(sppbjDate.getTime())) return 0;
+      
+      // Gunakan targetDate atau hari ini
+      const endDate = targetDate ? new Date(targetDate) : new Date();
+      
+      // Hitung selisih hari
+      const diffTime = Math.abs(endDate - sppbjDate);
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     },
     
     isToday(dateValue) {
@@ -1485,8 +1576,6 @@ export default {
     },
     
     confirmDelete(docId) {
-      // // console.log('=== DEBUG: Konfirmasi hapus data dengan docId ===', docId);
-      
       if (!docId || docId === 'null' || docId === 'undefined') {
         Toastify({
           text: "ID dokumen tidak valid. Tidak dapat menghapus data.",
@@ -1510,8 +1599,6 @@ export default {
     },
     
     async deleteDataConfirmed() {
-      // // console.log('=== DEBUG: Menghapus data dengan docId ===', this.deleteDocId);
-      
       if (!this.deleteDocId || this.deleteDocId === 'null' || this.deleteDocId === 'undefined') {
         Toastify({
           text: "ID dokumen tidak valid. Tidak dapat menghapus data.",
@@ -1573,12 +1660,8 @@ export default {
     },
     
     async handleSubmit() {
-      // // console.log('=== DEBUG: Metode handleSubmit dipanggil ===');
-      // // console.log('=== DEBUG: Nilai isLoggedIn saat ini ===', this.isLoggedIn);
-      
       if (!this.isLoggedIn) {
         this.errorData = 'Anda belum login. Silakan login terlebih dahulu.';
-        // // console.log('=== DEBUG: Pengguna tidak login, proses handleSubmit dibatalkan ===');
         return;
       }
       
@@ -1620,13 +1703,53 @@ export default {
       };
     },
     
-    formatDate(dateString) {
-      if (!dateString) return '';
-      if (typeof dateString === 'object' && dateString._seconds) {
-        return new Date(dateString._seconds * 1000).toLocaleDateString('id-ID');
-      }
-      return formatDate(dateString);
-    },
+formatDate(dateString) {
+  if (!dateString) return '';
+  
+  // Jika adalah objek Date
+  if (dateString instanceof Date) {
+    return dateString.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+  
+  // Jika adalah string format Firestore
+  if (typeof dateString === 'object' && dateString._seconds) {
+    return new Date(dateString._seconds * 1000).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+  
+  // Jika adalah string biasa
+  if (typeof dateString === 'string') {
+    // Coba parsing dengan fungsi parseExcelDate
+    const parsedDate = this.parseExcelDate(dateString);
+    if (parsedDate && !isNaN(parsedDate.getTime())) {
+      return parsedDate.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+    
+    // Jika parsing gagal, coba dengan Date constructor
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+  }
+  
+  // Jika semua cara gagal, kembalikan string asli
+  return dateString;
+},
     
     formatNumber(num) {
       if (num === null || num === undefined || isNaN(num)) return '0';
@@ -1675,8 +1798,8 @@ export default {
         memupukLubangKS: { rencana: selectedItem.memupukLubangKS?.rencana || 0, hariIni: selectedItem.memupukLubangKS?.hariIni || 0, sdHariIni: selectedItem.memupukLubangKS?.sdHariIni || 0 },
         menanamKS: { rencana: selectedItem.menanamKS?.rencana || 0, hariIni: selectedItem.menanamKS?.hariIni || 0, sdHariIni: selectedItem.menanamKS?.sdHariIni || 0 },
         progressOverall: selectedItem.progressOverall || 0,
-        tanggalSPPBJ: selectedItem.tanggalSPPBJ || '',
         tanggal: '', // Tanggal akan dipilih user
+        tanggalSPPBJ: selectedItem.tanggalSPPBJ || '',
         durasiKerja: 0, // Akan dihitung ulang
       };
       
@@ -1778,162 +1901,177 @@ export default {
       this.excelData = [];
       this.$refs.fileInput.value = '';
     },
-
-    async processExcelFile() {
-      if (!this.excelFile) return;
-      
-      this.isProcessingExcel = true;
-      this.excelData = [];
-      
+    
+async processExcelFile() {
+  if (!this.excelFile) return;
+  
+  this.isProcessingExcel = true;
+  this.excelData = [];
+  
+  try {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
       try {
-        const reader = new FileReader();
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
         
-        reader.onload = (e) => {
+        // Ambil sheet pertama
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        
+        // Konversi ke JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Skip header row (baris pertama)
+        const dataRows = jsonData.slice(1);
+        
+        // Proses setiap baris
+        const processedData = dataRows.map((row, index) => {
           try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            
-            // Ambil sheet pertama
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            
-            // Konversi ke JSON
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-            
-            // Skip header row (baris pertama)
-            const dataRows = jsonData.slice(1);
-            
-            // Proses setiap baris - tanpa batasan 5 data
-            const processedData = dataRows.map((row, index) => {
-              try {
-                // Cek apakah kolom A (index 0) memiliki nilai
-                if (!row[0] || row[0] === '' || row[0] === null || row[0] === undefined) {
-                  return {
-                    no: `Baris ${index + 2}`,
-                    error: 'Kolom No kosong'
-                  };
-                }
-                
-                // Mapping kolom Excel ke field data sesuai urutan baru
-                const rowData = {
-                  no: parseInt(row[0]) || 0,
-                  kebun: row[1] || this.currentUser.kebun,
-                  afdeling: row[2] || '',
-                  namaVendor: row[3] || '', // Kolom D untuk Nama Vendor
-                  luas: parseFloat(row[4]) || 0, // Kolom E untuk Luas Paket
-                  
-                  // Urutan baru sesuai permintaan
-                  ripping: {
-                    rencana: parseFloat(row[5]) || 0, // Kolom F
-                    sdHariIni: parseFloat(row[6]) || 0  // Kolom G
-                  },
-                  luku: {
-                    rencana: parseFloat(row[7]) || 0,  // Kolom H
-                    sdHariIni: parseFloat(row[8]) || 0  // Kolom I
-                  },
-                  tumbangChipping: {
-                    rencana: parseFloat(row[9]) || 0,  // Kolom J
-                    sdHariIni: parseFloat(row[10]) || 0 // Kolom K
-                  },
-                  pembuatanParit: {
-                    rencana: parseFloat(row[11]) || 0, // Kolom L
-                    sdHariIni: parseFloat(row[12]) || 0 // Kolom M
-                  },
-                  menanamMucuna: {
-                    rencana: parseFloat(row[13]) || 0, // Kolom N
-                    sdHariIni: parseFloat(row[14]) || 0 // Kolom O
-                  },
-                  lubangTanamKS: { // Melubang Tanam
-                    rencana: parseFloat(row[15]) || 0, // Kolom P
-                    sdHariIni: parseFloat(row[16]) || 0 // Kolom Q
-                  },
-                  memupukLubangKS: { // Memupuk Lubang Tanam
-                    rencana: parseFloat(row[17]) || 0, // Kolom R
-                    sdHariIni: parseFloat(row[18]) || 0 // Kolom S
-                  },
-                  menanamKS: {
-                    rencana: parseFloat(row[19]) || 0, // Kolom T
-                    sdHariIni: parseFloat(row[20]) || 0 // Kolom U
-                  },
-                  pembuatanTeras: {
-                    rencana: parseFloat(row[21]) || 0, // Kolom V
-                    sdHariIni: parseFloat(row[22]) || 0 // Kolom W
-                  },
-                  pembuatanJalan: {
-                    rencana: parseFloat(row[23]) || 0, // Kolom X
-                    sdHariIni: parseFloat(row[24]) || 0 // Kolom Y
-                  },
-                  tanggalSPPBJ: this.parseDate(row[25]) || '', // Kolom Z
-                  error: null
-                };
-                
-                // Validasi data
-                if (!rowData.no || !rowData.afdeling || rowData.luas <= 0) {
-                  rowData.error = 'Data tidak lengkap';
-                }
-                
-                // Hitung progress overall
-                this.calculateProgressForExcelData(rowData);
-                
-                return rowData;
-              } catch (error) {
-                return {
-                  no: row[0] || `Baris ${index + 2}`,
-                  error: 'Format data tidak valid'
-                };
-              }
-            });
-            
-            // Filter hanya baris yang memiliki data (tidak error)
-            this.excelData = processedData.filter(item => !item.error || item.error !== 'Kolom No kosong');
-            
-            if (this.excelData.length === 0) {
-              Toastify({ 
-                text: "Tidak ada data yang dapat diproses dari file Excel", 
-                duration: 3000, 
-                gravity: "top", 
-                position: "right", 
-                style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } 
-              }).showToast();
-            } else {
-              const validCount = this.excelData.filter(item => !item.error).length;
-              const invalidCount = this.excelData.filter(item => item.error).length;
-              
-              Toastify({ 
-                text: `Berhasil memproses ${validCount} data valid${invalidCount > 0 ? ` dan ${invalidCount} data tidak valid` : ''}`, 
-                duration: 3000, 
-                gravity: "top", 
-                position: "right", 
-                style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } 
-              }).showToast();
+            // Cek apakah kolom A (index 0) memiliki nilai
+            if (!row[0] || row[0] === '' || row[0] === null || row[0] === undefined) {
+              return {
+                no: `Baris ${index + 2}`,
+                error: 'Kolom No kosong'
+              };
             }
+            
+            // Parsing tanggal SPPBJ dengan fungsi khusus
+            const tanggalSPPBJ = this.parseExcelDate(row[25]); // Kolom Z
+            
+            // Hitung durasi kerja
+            const durasiKerja = this.calculateDurasiForDate(tanggalSPPBJ, this.excelImportDate);
+            
+            // Mapping kolom Excel ke field data
+            const rowData = {
+              no: parseInt(row[0]) || 0,
+              kebun: row[1] || this.currentUser.kebun,
+              afdeling: row[2] || '',
+              namaVendor: row[3] || '',
+              luas: parseFloat(row[4]) || 0,
+              
+              // Urutan baru sesuai permintaan
+              ripping: {
+                rencana: parseFloat(row[5]) || 0, // Kolom F
+                sdHariIni: parseFloat(row[6]) || 0  // Kolom G
+              },
+              luku: {
+                rencana: parseFloat(row[7]) || 0,  // Kolom H
+                sdHariIni: parseFloat(row[8]) || 0  // Kolom I
+              },
+              tumbangChipping: {
+                rencana: parseFloat(row[9]) || 0,  // Kolom J
+                sdHariIni: parseFloat(row[10]) || 0 // Kolom K
+              },
+              pembuatanParit: {
+                rencana: parseFloat(row[11]) || 0, // Kolom L
+                sdHariIni: parseFloat(row[12]) || 0 // Kolom M
+              },
+              menanamMucuna: {
+                rencana: parseFloat(row[13]) || 0, // Kolom N
+                sdHariIni: parseFloat(row[14]) || 0 // Kolom O
+              },
+              lubangTanamKS: { // Melubang Tanam
+                rencana: parseFloat(row[15]) || 0, // Kolom P
+                sdHariIni: parseFloat(row[16]) || 0 // Kolom Q
+              },
+              memupukLubangKS: { // Memupuk Lubang Tanam
+                rencana: parseFloat(row[17]) || 0, // Kolom R
+                sdHariIni: parseFloat(row[18]) || 0 // Kolom S
+              },
+              menanamKS: {
+                rencana: parseFloat(row[19]) || 0, // Kolom T
+                sdHariIni: parseFloat(row[20]) || 0 // Kolom U
+              },
+              pembuatanTeras: {
+                rencana: parseFloat(row[21]) || 0, // Kolom V
+                sdHariIni: parseFloat(row[22]) || 0 // Kolom W
+              },
+              pembuatanJalan: {
+                rencana: parseFloat(row[23]) || 0, // Kolom X
+                sdHariIni: parseFloat(row[24]) || 0 // Kolom Y
+              },
+              // Pastikan tanggal SPPBJ tersimpan dengan benar
+              tanggalSPPBJ: tanggalSPPBJ,
+              durasiKerja: durasiKerja,
+              error: null
+            };
+            
+            // Validasi data
+            if (!rowData.no || !rowData.afdeling || rowData.luas <= 0) {
+              rowData.error = 'Data tidak lengkap';
+            }
+            
+            // Validasi khusus untuk tanggal SPPBJ
+            if (!tanggalSPPBJ || isNaN(tanggalSPPBJ.getTime())) {
+              rowData.error = 'Format tanggal SPPBJ tidak valid';
+            }
+            
+            // Hitung progress overall
+            this.calculateProgressForExcelData(rowData);
+            
+            return rowData;
           } catch (error) {
-            console.error('Error parsing Excel:', error);
-            Toastify({ 
-              text: "Gagal memproses file Excel. Pastikan format file benar", 
-              duration: 3000, 
-              gravity: "top", 
-              position: "right", 
-              style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } 
-            }).showToast();
-          } finally {
-            this.isProcessingExcel = false;
+            console.error('Error processing row:', error);
+            return {
+              no: row[0] || `Baris ${index + 2}`,
+              error: 'Format data tidak valid'
+            };
           }
-        };
+        });
         
-        reader.readAsArrayBuffer(this.excelFile);
+        // Filter hanya baris yang memiliki data (tidak error)
+        this.excelData = processedData.filter(item => !item.error || item.error !== 'Kolom No kosong');
+        
+        if (this.excelData.length === 0) {
+          Toastify({ 
+            text: "Tidak ada data yang dapat diproses dari file Excel", 
+            duration: 3000, 
+            gravity: "top", 
+            position: "right", 
+            style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } 
+          }).showToast();
+        } else {
+          const validCount = this.excelData.filter(item => !item.error).length;
+          const invalidCount = this.excelData.filter(item => item.error).length;
+          
+          Toastify({ 
+            text: `Berhasil memproses ${validCount} data valid${invalidCount > 0 ? ` dan ${invalidCount} data tidak valid` : ''}`, 
+            duration: 3000, 
+            gravity: "top", 
+            position: "right", 
+            style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } 
+          }).showToast();
+        }
       } catch (error) {
-        console.error('Error reading file:', error);
-        this.isProcessingExcel = false;
+        console.error('Error parsing Excel:', error);
         Toastify({ 
-          text: "Gagal membaca file", 
+          text: "Gagal memproses file Excel. Pastikan format file benar", 
           duration: 3000, 
           gravity: "top", 
           position: "right", 
           style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } 
         }).showToast();
+      } finally {
+        this.isProcessingExcel = false;
       }
-    },
+    };
+    
+    reader.readAsArrayBuffer(this.excelFile);
+  } catch (error) {
+    console.error('Error reading file:', error);
+    this.isProcessingExcel = false;
+    Toastify({ 
+      text: "Gagal membaca file", 
+      duration: 3000, 
+      gravity: "top", 
+      position: "right", 
+      style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } 
+    }).showToast();
+  }
+},
+    
     parseNumber(value) {
       if (!value) return 0;
       
@@ -1945,44 +2083,6 @@ export default {
       }
       
       return parseFloat(value) || 0;
-    },
-
-    parseDate(value) {
-      if (!value) return '';
-      
-      // Jika sudah dalam format YYYY-MM-DD
-      if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        // Konversi ke format DD-MM-YY untuk tampilan
-        const parts = value.split('-');
-        if (parts.length === 3) {
-          const year = parts[0].substring(2); // Ambil 2 digit terakhir tahun
-          const month = parts[1];
-          const day = parts[2];
-          return `${day}-${month}-${year}`;
-        }
-        return value;
-      }
-      
-      // Konversi dari format DD/MM/YYYY atau DD-MM-YYYY
-      if (typeof value === 'string') {
-        const parts = value.split(/[\/-]/);
-        if (parts.length === 3) {
-          const day = parts[0].padStart(2, '0');
-          const month = parts[1].padStart(2, '0');
-          const year = parts[2].substring(2); // Ambil 2 digit terakhir tahun
-          return `${day}-${month}-${year}`;
-        }
-      }
-      
-      // Jika adalah objek Date
-      if (value instanceof Date) {
-        const day = value.getDate().toString().padStart(2, '0');
-        const month = (value.getMonth() + 1).toString().padStart(2, '0');
-        const year = value.getFullYear().toString().substring(2);
-        return `${day}-${month}-${year}`;
-      }
-      
-      return '';
     },
 
     calculateProgressForExcelData(data) {
@@ -2000,86 +2100,11 @@ export default {
       data.progressOverall = totalRencana > 0 ? (totalSdHariIni / totalRencana) * 100 : 0;
     },
 
- // Metode baru untuk menangani save Excel dengan pengecekan duplikat
-  async handleSaveExcel() {
-    if (!this.excelImportDate || this.excelData.length === 0) return;
-    
-    // Cek data yang valid
-    const validData = this.excelData.filter(item => !item.error);
-    
-    if (validData.length === 0) {
-      Toastify({ 
-        text: "Tidak ada data valid untuk disimpan", 
-        duration: 3000, 
-        gravity: "top", 
-        position: "right", 
-        style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } 
-      }).showToast();
-      return;
-    }
-    
-    // Cek apakah ada data yang sudah ada
-    this.checkForExistingData(validData);
-  },
-  
-  // Metode untuk mengecek data yang sudah ada
-  checkForExistingData(validData) {
-    this.conflictingData = [];
-    
-    // Format tanggal yang dipilih untuk perbandingan
-    const selectedDate = this.formatDateForFilter(this.excelImportDate);
-    
-    // Cek setiap data dari Excel
-    validData.forEach(excelItem => {
-      // Cari data yang sudah ada dengan kriteria yang sama
-      const existingItem = this.dataList.find(dbItem => {
-        const itemDate = this.formatDateForFilter(dbItem.tanggal);
-        return itemDate === selectedDate && 
-               dbItem.kebun === (excelItem.kebun || this.currentUser.kebun) &&
-               dbItem.afdeling === excelItem.afdeling &&
-               dbItem.no === excelItem.no;
-      });
+    // Metode baru untuk menangani save Excel dengan pengecekan duplikat
+    async handleSaveExcel() {
+      if (!this.excelImportDate || this.excelData.length === 0) return;
       
-      // Jika data sudah ada, tambahkan ke daftar konflik
-      if (existingItem) {
-        this.conflictingData.push({
-          docId: existingItem.docId,
-          no: existingItem.no,
-          afdeling: existingItem.afdeling,
-          kebun: existingItem.kebun
-        });
-      }
-    });
-    
-    // Jika ada konflik, tampilkan modal konfirmasi
-    if (this.conflictingData.length > 0) {
-      this.showReplaceConfirmModal = true;
-    } else {
-      // Jika tidak ada konflik, langsung simpan
-      this.saveExcelData();
-    }
-  },
-  
-  // Metode untuk menutup modal konfirmasi
-  closeReplaceConfirmModal() {
-    this.showReplaceConfirmModal = false;
-    this.conflictingData = [];
-  },
-  
-  // Metode untuk mengganti dan menyimpan data Excel
-  async replaceAndSaveExcelData() {
-    this.closeReplaceConfirmModal();
-    this.saveExcelData(true); // Kirim flag replace=true
-  },
-  
-  // Modifikasi metode saveExcelData
-  async saveExcelData(isReplace = false) {
-    if (!this.excelImportDate || this.excelData.length === 0) return;
-    
-    this.isSavingExcel = true;
-    
-    try {
-      // Filter hanya data yang valid
+      // Cek data yang valid
       const validData = this.excelData.filter(item => !item.error);
       
       if (validData.length === 0) {
@@ -2093,93 +2118,177 @@ export default {
         return;
       }
       
-      // Jika ini adalah operasi replace, hapus data yang sudah ada
-      if (isReplace && this.conflictingData.length > 0) {
-        const deletePromises = this.conflictingData.map(item => 
-          deleteDataTU(item.docId)
-        );
-        
-        await Promise.all(deletePromises);
-        
-        Toastify({ 
-          text: `Menghapus ${this.conflictingData.length} data lama...`, 
-          duration: 2000, 
-          gravity: "top", 
-          position: "right", 
-          style: { background: "linear-gradient(to right, #f59e0b, #f97316)" } 
-        }).showToast();
-      }
+      // Cek apakah ada data yang sudah ada
+      this.checkForExistingData(validData);
+    },
+    
+    // Metode untuk mengecek data yang sudah ada
+    checkForExistingData(validData) {
+      this.conflictingData = [];
       
-      // Siapkan data untuk disimpan
-      const savePromises = validData.map(item => {
-        const dataToSave = {
-          ...item,
-          tanggal: this.excelImportDate,
-          customTanggal: this.excelImportDate,
-          kebun: item.kebun || this.currentUser.kebun,
-          // Hitung durasi kerja
-          durasiKerja: this.calculateDurasiForDate(item.tanggalSPPBJ, this.excelImportDate)
-        };
+      // Format tanggal yang dipilih untuk perbandingan
+      const selectedDate = this.formatDateForFilter(this.excelImportDate);
+      
+      // Cek setiap data dari Excel
+      validData.forEach(excelItem => {
+        // Cari data yang sudah ada dengan kriteria yang sama
+        const existingItem = this.dataList.find(dbItem => {
+          const itemDate = this.formatDateForFilter(dbItem.tanggal);
+          return itemDate === selectedDate && 
+                 dbItem.kebun === (excelItem.kebun || this.currentUser.kebun) &&
+                 dbItem.afdeling === excelItem.afdeling &&
+                 dbItem.no === excelItem.no;
+        });
         
-        // Hapus field error
-        delete dataToSave.error;
-        
-        return saveDataTU(dataToSave);
+        // Jika data sudah ada, tambahkan ke daftar konflik
+        if (existingItem) {
+          this.conflictingData.push({
+            docId: existingItem.docId,
+            no: existingItem.no,
+            afdeling: existingItem.afdeling,
+            kebun: existingItem.kebun
+          });
+        }
       });
       
-      // Simpan semua data secara paralel
-      await Promise.all(savePromises);
-      
+      // Jika ada konflik, tampilkan modal konfirmasi
+      if (this.conflictingData.length > 0) {
+        this.showReplaceConfirmModal = true;
+      } else {
+        // Jika tidak ada konflik, langsung simpan
+        this.saveExcelData();
+      }
+    },
+    
+    // Metode untuk menutup modal konfirmasi
+    closeReplaceConfirmModal() {
+      this.showReplaceConfirmModal = false;
+      this.conflictingData = [];
+    },
+    
+    // Metode untuk mengganti dan menyimpan data Excel
+    async replaceAndSaveExcelData() {
+      this.closeReplaceConfirmModal();
+      this.saveExcelData(true); // Kirim flag replace=true
+    },
+    
+    // Simpan data Excel dengan format tanggal yang benar
+async saveExcelData(isReplace = false) {
+  if (!this.excelImportDate || this.excelData.length === 0) return;
+  
+  this.isSavingExcel = true;
+  
+  try {
+    // Filter hanya data yang valid
+    const validData = this.excelData.filter(item => !item.error);
+    
+    if (validData.length === 0) {
       Toastify({ 
-        text: `Berhasil ${isReplace ? 'mengganti dan ' : ''}menyimpan ${validData.length} data untuk tanggal ${this.formatDate(this.excelImportDate)}`, 
-        duration: 5000, 
-        gravity: "top", 
-        position: "right", 
-        style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } 
-      }).showToast();
-      
-      this.closePreviousDateModal();
-      this.fetchData();
-    } catch (error) {
-      console.error('Error saving Excel data:', error);
-      Toastify({ 
-        text: error.response?.data?.message || 'Gagal menyimpan data dari Excel', 
+        text: "Tidak ada data valid untuk disimpan", 
         duration: 3000, 
         gravity: "top", 
         position: "right", 
         style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } 
       }).showToast();
-    } finally {
-      this.isSavingExcel = false;
-      this.conflictingData = [];
+      return;
     }
-  },
-
-    calculateDurasiForDate(tanggalSPPBJ, targetDate) {
-      if (!tanggalSPPBJ || !targetDate) return 0;
+    
+    // Jika ini adalah operasi replace, hapus data yang sudah ada
+    if (isReplace && this.conflictingData.length > 0) {
+      const deletePromises = this.conflictingData.map(item => 
+        deleteDataTU(item.docId)
+      );
       
-      // Konversi dari format DD-MM-YY ke Date object
-      let sppbjDate;
-      if (typeof tanggalSPPBJ === 'string' && /^\d{2}-\d{2}-\d{2}$/.test(tanggalSPPBJ)) {
-        const parts = tanggalSPPBJ.split('-');
-        const day = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1; // Bulan dimulai dari 0
-        let year = parseInt(parts[2]);
-        
-        // Jika tahun kurang dari 100, tambahkan 2000
-        if (year < 100) {
-          year += 2000;
+      await Promise.all(deletePromises);
+      
+      Toastify({ 
+        text: `Menghapus ${this.conflictingData.length} data lama...`, 
+        duration: 2000, 
+        gravity: "top", 
+        position: "right", 
+        style: { background: "linear-gradient(to right, #f59e0b, #f97316)" } 
+      }).showToast();
+    }
+    
+    // Siapkan data untuk disimpan
+    const savePromises = validData.map(item => {
+      // Debug: Tampilkan nilai tanggal SPPBJ
+      console.log('Tanggal SPPBJ dari Excel:', item.tanggalSPPBJ);
+      console.log('Type tanggal SPPBJ:', typeof item.tanggalSPPBJ);
+      
+      // Format tanggal SPPBJ ke YYYY-MM-DD untuk disimpan
+      let formattedSPPBJDate;
+      
+      if (item.tanggalSPPBJ instanceof Date) {
+        // Jika sudah objek Date, format ke YYYY-MM-DD
+        const year = item.tanggalSPPBJ.getFullYear();
+        const month = String(item.tanggalSPPBJ.getMonth() + 1).padStart(2, '0');
+        const day = String(item.tanggalSPPBJ.getDate()).padStart(2, '0');
+        formattedSPPBJDate = `${year}-${month}-${day}`;
+      } else if (typeof item.tanggalSPPBJ === 'string') {
+        // Jika string, coba parsing dengan fungsi parseExcelDate
+        const parsedDate = this.parseExcelDate(item.tanggalSPPBJ);
+        if (parsedDate && !isNaN(parsedDate.getTime())) {
+          const year = parsedDate.getFullYear();
+          const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+          const day = String(parsedDate.getDate()).padStart(2, '0');
+          formattedSPPBJDate = `${year}-${month}-${day}`;
+        } else {
+          formattedSPPBJDate = item.tanggalSPPBJ; // Gunakan asli jika tidak bisa diparsing
         }
-        
-        sppbjDate = new Date(year, month, day);
       } else {
-        sppbjDate = new Date(tanggalSPPBJ);
+        formattedSPPBJDate = ''; // Default kosong
       }
       
-      const target = new Date(targetDate);
-      const diffTime = Math.abs(target - sppbjDate);
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    },
+      console.log('Tanggal SPPBJ setelah format:', formattedSPPBJDate);
+      
+      const dataToSave = {
+        ...item,
+        tanggal: this.excelImportDate,
+        customTanggal: this.excelImportDate,
+        kebun: item.kebun || this.currentUser.kebun,
+        // Pastikan tanggal SPPBJ tersimpan dengan benar
+        tanggalSPPBJ: formattedSPPBJDate,
+        durasiKerja: item.durasiKerja // Durasi kerja sudah dihitung sebelumnya
+      };
+      
+      // Debug: Tampilkan data yang akan disimpan
+      console.log('Data yang akan disimpan:', dataToSave);
+      
+      // Hapus field error
+      delete dataToSave.error;
+      
+      return saveDataTU(dataToSave);
+    });
+    
+    // Simpan semua data secara paralel
+    await Promise.all(savePromises);
+    
+    Toastify({ 
+      text: `Berhasil ${isReplace ? 'mengganti dan ' : ''}menyimpan ${validData.length} data untuk tanggal ${this.formatDateForDisplay(this.excelImportDate)}`, 
+      duration: 5000, 
+      gravity: "top", 
+      position: "right", 
+      style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } 
+    }).showToast();
+    
+    this.closePreviousDateModal();
+    this.fetchData();
+  } catch (error) {
+    console.error('Error saving Excel data:', error);
+    Toastify({ 
+      text: error.response?.data?.message || 'Gagal menyimpan data dari Excel', 
+      duration: 3000, 
+      gravity: "top", 
+      position: "right", 
+      style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } 
+    }).showToast();
+  } finally {
+    this.isSavingExcel = false;
+    this.conflictingData = [];
+  }
+},
+
     downloadTemplate() {
       // Buat data template dengan format baru
       const templateData = [
@@ -2211,7 +2320,7 @@ export default {
           56.73, 13.36, // Menanam KS
           800, 750, // Pembuatan Teras
           1200, 1150, // Pembuatan Jalan
-          '01-11-24' // Tanggal SPPBJ (DD-MM-YY)
+          '2024-11-01' // Tanggal SPPBJ (YYYY-MM-DD)
         ],
         // Contoh data 2
         [
@@ -2226,7 +2335,7 @@ export default {
           45.50, 10.00, // Menanam KS
           600, 580, // Pembuatan Teras
           1000, 950, // Pembuatan Jalan
-          '05-11-24' // Tanggal SPPBJ (DD-MM-YY)
+          '2024-11-05' // Tanggal SPPBJ (YYYY-MM-DD)
         ]
       ];
       
@@ -2281,15 +2390,15 @@ export default {
       }).showToast();
     },
     
+    cancelEdit() {
+      this.isEditMode = false;
+      this.resetForm();
+    }
   },
   
   async created() {
-    // // console.log('=== DEBUG: Komponen TanamanUlangKrani dibuat ===');
-    // // console.log('=== DEBUG: Memeriksa status login saat ini... ===');
-    
     if (!this.isLoggedIn) {
       this.errorData = 'Anda belum login. Silakan login terlebih dahulu.';
-      // // console.log('=== DEBUG: Tidak ada sesi login, redirect ke halaman login ===');
       this.$router.push('/login');
       return;
     }

@@ -24,7 +24,7 @@
           
           <div class="cards-grid">
             <!-- Card for Tanaman Ulang -->
-            <router-link to="/tanaman-ulang" class="card-link">
+            <router-link to="/tanaman-ulang/view" class="card-link">
               <div class="dashboard-card card-ulang">
                 <div class="card-header">
                   <div class="card-shimmer"></div>

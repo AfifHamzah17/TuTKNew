@@ -1,24 +1,46 @@
 <!-- src/App.vue -->
 <template>
   <div id="app">
-    <nav v-if="isLoggedIn" class="navbar">
+    <!-- Navbar selalu ditampilkan -->
+    <nav class="navbar">
       <div class="container">
         <div class="navbar-brand">
-          <router-link to="/" class="brand-link">Dashboard Monitoring</router-link>
+          <a class="navbar-item" href="/">
+            <img src="/2.png" alt="Dashboard Monitoring" class="navbar-brand-img" style="width: 50px;">
+          </a>
         </div>
-       <div class="navbar-menu">
-  <router-link to="/" class="nav-item">Home</router-link>
-  <router-link to="/tanaman-ulang" class="nav-item">Lihat Data Tanaman Ulang</router-link>
-  <router-link to="/tanaman-ulang/input" class="nav-item">Input Data Tanaman Ulang</router-link>
-  <router-link to="/tanaman-konversi" class="nav-item">Tanaman Konversi</router-link>
-  <router-link v-if="isAdmin" to="/admin" class="nav-item">Admin</router-link>
-  <a @click="promptLogout" class="nav-item logout">Logout</a>
-</div>
+        
+        <!-- Hamburger menu button for mobile -->
+        <button class="navbar-toggle" @click="toggleMobileMenu" :class="{ 'is-active': isMobileMenuOpen }">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </button>
+        
+        <!-- Menu items -->
+        <div class="navbar-menu" :class="{ 'is-active': isMobileMenuOpen }">
+          <!-- PERUBAHAN: Link ini sekarang mengarah ke /tanaman-ulang/view -->
+          <router-link to="/tanaman-ulang/view" class="nav-item" @click="closeMobileMenu">Tanaman Ulang</router-link>
+          
+          <!-- Link input hanya muncul jika sudah login -->
+          <router-link v-if="isLoggedIn" to="/tanaman-ulang/input" class="nav-item" @click="closeMobileMenu">Input Data Tanaman Ulang</router-link>
+          
+          <router-link to="/tanaman-konversi" class="nav-item" @click="closeMobileMenu">Tanaman Konversi</router-link>
+          <router-link v-if="isAdmin" to="/admin" class="nav-item" @click="closeMobileMenu">Admin</router-link>
+          
+          <!-- Tampilkan Login jika belum login, dan Logout jika sudah login -->
+          <router-link v-if="!isLoggedIn" to="/login" class="nav-item" @click="closeMobileMenu">Login</router-link>
+          <a v-else @click="promptLogout" class="nav-item logout">Logout</a>
+        </div>
       </div>
     </nav>
+    
+    <!-- Backdrop overlay for mobile menu -->
+    <div v-if="isMobileMenuOpen" class="mobile-menu-backdrop" @click="closeMobileMenu"></div>
+    
     <router-view></router-view>
 
-    <!-- PERUBAHAN: Tambahkan komponen modal konfirmasi -->
+    <!-- Modal konfirmasi logout -->
     <ConfirmModal
       :isVisible="showLogoutModal"
       title="Konfirmasi Logout"
@@ -32,45 +54,105 @@
 </template>
 
 <script>
-import { logout } from './services/authService';
-// PERUBAHAN: Import komponen ConfirmModal
+import { logout, authEvents } from './services/authService';
 import ConfirmModal from './components/ConfirmModal.vue';
+import axios from 'axios'; // Import axios directly
 
 export default {
   name: 'App',
   components: {
-    // PERUBAHAN: Daftarkan komponen ConfirmModal
     ConfirmModal
   },
   data() {
     return {
-      // PERUBAHAN: Tambahkan state untuk mengontrol visibilitas modal
-      showLogoutModal: false
+      showLogoutModal: false,
+      isMobileMenuOpen: false, // New property for mobile menu state
+      // Ubah dari computed property ke data property
+      isLoggedIn: !!localStorage.getItem('token'),
+      // Simpan data user untuk reaktivitas
+      user: JSON.parse(localStorage.getItem('user') || '{}')
     };
   },
   computed: {
-    isLoggedIn() {
-      return !!localStorage.getItem('token');
-    },
     isAdmin() {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      return user.role === 'admin';
+      return this.user.role === 'admin';
     }
   },
+  created() {
+    // Dengarkan event storage untuk update saat tab berbeda melakukan login/logout
+    window.addEventListener('storage', this.handleStorageChange);
+    
+    // Dengarkan event auth dari authService
+    authEvents.on('login', this.handleLogin);
+    authEvents.on('logout', this.handleLogout);
+    
+    // Periksa token saat aplikasi dimuat
+    this.checkAuthStatus();
+  },
+  beforeDestroy() {
+    // Hapus listener saat komponen dihancurkan
+    window.removeEventListener('storage', this.handleStorageChange);
+    authEvents.off('login', this.handleLogin);
+    authEvents.off('logout', this.handleLogout);
+  },
   methods: {
-    // PERUBAHAN: Method ini dipanggil saat link logout diklik
+    checkAuthStatus() {
+      // Periksa status autentikasi dan update state
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      this.isLoggedIn = !!token;
+      this.user = user;
+      
+      // Set token ke header axios - FIX: Use imported axios directly
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      } else {
+        delete axios.defaults.headers.common['Authorization'];
+      }
+    },
+    handleStorageChange(event) {
+      // Handle perubahan storage (misalnya saat login/logout di tab lain)
+      if (event.key === 'token' || event.key === 'user') {
+        this.checkAuthStatus();
+      }
+    },
+    handleLogin({ token, user }) {
+      // Update state saat login
+      this.isLoggedIn = true;
+      this.user = user;
+    },
+    handleLogout() {
+      // Update state saat logout
+      this.isLoggedIn = false;
+      this.user = {};
+    },
     promptLogout() {
       this.showLogoutModal = true;
+      this.closeMobileMenu(); // Close mobile menu when logout modal opens
     },
-    // PERUBAHAN: Method ini dipanggil jika user mengkonfirmasi logout
     confirmLogout() {
-      this.showLogoutModal = false; // Sembunyikan modal
-      logout(); // Jalankan fungsi logout
-      this.$router.push('/login'); // Redirect ke halaman login
+      this.showLogoutModal = false; 
+      logout();
+      // State sudah diupdate melalui event handler
+      this.$router.push('/'); // Arahkan ke home setelah logout
     },
-    // PERUBAHAN: Method ini dipanggil jika user membatalkan logout
     cancelLogout() {
-      this.showLogoutModal = false; // Cukup sembunyikan modal
+      this.showLogoutModal = false;
+    },
+    toggleMobileMenu() {
+      this.isMobileMenuOpen = !this.isMobileMenuOpen;
+    },
+    closeMobileMenu() {
+      this.isMobileMenuOpen = false;
+    }
+  },
+  watch: {
+    // Watch untuk perubahan route
+    $route() {
+      // Periksa ulang status autentikasi saat route berubah
+      this.checkAuthStatus();
+      this.closeMobileMenu(); // Close mobile menu when route changes
     }
   }
 }
@@ -99,10 +181,12 @@ body {
 
 /* Navbar styles */
 .navbar {
-  background-color: #4f46e5;
+  background: linear-gradient(135deg, #15803d, #166534);
   color: white;
   padding: 0.75rem 0;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 9999; /* High z-index for navbar */
 }
 
 .navbar .container {
@@ -146,6 +230,102 @@ body {
 
 .logout {
   cursor: pointer;
+}
+
+/* Hamburger menu styles */
+.navbar-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 2rem;
+  height: 2rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 10000; /* Very high z-index for hamburger button */
+}
+
+.navbar-toggle:focus {
+  outline: none;
+}
+
+.bar {
+  display: block;
+  width: 2rem;
+  height: 0.25rem;
+  background-color: white;
+  border-radius: 0.125rem;
+  transition: all 0.3s linear;
+  position: relative;
+  transform-origin: 1px;
+}
+
+/* First bar animation */
+.navbar-toggle.is-active .bar:nth-child(1) {
+  transform: rotate(45deg);
+}
+
+/* Second bar animation */
+.navbar-toggle.is-active .bar:nth-child(2) {
+  opacity: 0;
+}
+
+/* Third bar animation */
+.navbar-toggle.is-active .bar:nth-child(3) {
+  transform: rotate(-45deg);
+}
+
+/* Mobile menu backdrop */
+.mobile-menu-backdrop {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9998; /* High z-index but below the menu */
+}
+
+/* Mobile responsive styles */
+@media screen and (max-width: 768px) {
+  .navbar-toggle {
+    display: flex;
+  }
+  
+  .mobile-menu-backdrop {
+    display: block;
+  }
+  
+  .navbar-menu {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 60px);
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: rgba(21, 128, 61, 0.98);
+    padding-top: 2rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    gap: 1.5rem;
+    z-index: 9999; /* Very high z-index for mobile menu */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  .navbar-menu.is-active {
+    transform: translateX(0);
+  }
+  
+  .nav-item {
+    font-size: 1.2rem;
+    padding: 0.75rem 1rem;
+    width: 80%;
+    text-align: center;
+  }
 }
 
 /* Router link styles */

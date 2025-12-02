@@ -174,14 +174,16 @@
               <div class="regression-summary">
                 <div class="summary-item">
                   <span class="summary-label">Perubahan Progress Overall:</span>
-                  <span class="summary-value" :class="getChangeClass(regressionData.overallProgressChange)">
-                    {{ formatProgressChange(regressionData.overallProgressChange) }}
+                  <!-- FIX: Using optional chaining and nullish coalescing -->
+                  <span class="summary-value" :class="getChangeClass(regressionData?.overallProgressChange)">
+                    {{ formatProgressChange(regressionData?.overallProgressChange || 0) }}
                   </span>
                 </div>
                 <div class="summary-item">
                   <span class="summary-label">Perubahan Total Luas:</span>
-                  <span class="summary-value" :class="getChangeClass(regressionData.totalLuasChange)">
-                    {{ regressionData.totalLuasChange > 0 ? '+' : '' }}{{ regressionData.totalLuasChange.toFixed(2) }} ha
+                  <!-- FIX: Using optional chaining and nullish coalescing -->
+                  <span class="summary-value" :class="getChangeClass(regressionData?.totalLuasChange)">
+                    {{ (regressionData?.totalLuasChange || 0) > 0 ? '+' : '' }}{{ (regressionData?.totalLuasChange || 0).toFixed(2) }} ha
                   </span>
                 </div>
               </div>
@@ -189,7 +191,8 @@
               <div class="regression-details">
                 <h4 class="details-title">Detail Perubahan per Kegiatan</h4>
                 <div class="activity-regression">
-                  <div v-for="(activity, index) in regressionData.activities" :key="index" class="activity-item">
+                  <!-- FIX: Using optional chaining and nullish coalescing for the v-for loop -->
+                  <div v-for="(activity, index) in (regressionData?.activities || [])" :key="index" class="activity-item">
                     <div class="activity-name">{{ activity.name }}</div>
                     <div class="activity-progress">
                       <div class="progress-item">
@@ -206,8 +209,9 @@
                       </div>
                       <div class="progress-item">
                         <span class="progress-label">Perubahan:</span>
+                        <!-- FIX: Using nullish coalescing for activity.change -->
                         <span class="progress-value change" :class="getChangeClass(activity.change)">
-                          {{ activity.change > 0 ? '+' : '' }}{{ activity.change }}
+                          {{ (activity.change || 0) > 0 ? '+' : '' }}{{ activity.change || 0 }}
                         </span>
                       </div>
                     </div>
@@ -591,7 +595,7 @@
 </template>
 
 <script>
-import { getDataTU } from '../services/dataService';
+import { getPublicDataTU } from '../services/dataService';
 import { formatDate } from '../utils/dateUtils';
 import { exportToExcel } from '../utils/exportUtils.js';
 import ProgressItem from '../components/ProgressItem.vue';
@@ -641,31 +645,21 @@ export default {
       progressDataToday: [],
       progressDataYesterday: [],
       comparisonData: [],
-      // State untuk kodering
-      koderingMap: {},
       // State untuk mencegah perhitungan berulang
       progressCalculated: false,
       lastCalculatedProgressChange: null,
-      // State untuk menyimpan formatted progress change
-      formattedProgressChange: null
+      // PERBAIKAN: Ubah nama untuk menghindari konflik dengan computed property
+      initialFormattedProgressChange: null
     };
   },
   computed: {
     // Filter data berdasarkan filter yang dipilih
     filteredData() {
-      // console.log('🔍 [filteredData] Menghitung filtered data...');
-      // console.log('  - Total raw data:', this.rawData?.length || 0);
-      // console.log('  - Selected date:', this.selectedDate);
-      // console.log('  - Current date ISO:', this.currentDateISO);
-      // console.log('  - Filters:', this.filters);
-      
       if (!this.rawData || !this.rawData.length) {
-        // console.log('⚠️ [filteredData] Tidak ada raw data');
         return [];
       }
       
       const filterDate = this.selectedDate || this.currentDateISO;
-      // console.log('  - Filter date yang digunakan:', filterDate);
       
       const result = this.rawData.filter(row => {
         // Filter tanggal - default hari ini
@@ -732,18 +726,6 @@ export default {
         return true;
       });
       
-      // console.log('✅ [filteredData] Filtered data dihitung');
-      // console.log('  - Jumlah filtered data:', result.length);
-      
-      if (result.length > 0) {
-        // console.log('  - Sample filtered data:', {
-        //   kebun: result[0].kebun,
-        //   afdeling: result[0].afdeling,
-        //   progressOverall: result[0].progressOverall,
-        //   tanggal: result[0].tanggal
-        // });
-      }
-      
       return result;
     },
     
@@ -759,6 +741,22 @@ export default {
       });
       
       return groups;
+    },
+
+    // CHANGE: NEW computed property for formatted grid data
+    gridData() {
+      const groups = this.paginatedGroupedData;
+      const formattedGroups = {};
+
+      for (const kebunName in groups) {
+        formattedGroups[kebunName] = groups[kebunName.map(row => ({
+          ...row,
+          // Format the date here
+          tanggalSPPBJ: this.formatDate(row.tanggalSPPBJ)
+        }))];
+      }
+      
+      return formattedGroups;
     },
 
     // Calculate pagination values
@@ -834,8 +832,13 @@ export default {
     },
     
     filteredTotalLuasPaket() {
-      if (!this.filteredData || !this.filteredData.length) return 0;
-      return this.filteredData.reduce((total, row) => total + (parseFloat(row.luas) || 0), 0);
+      if (!this.filteredData || !this.filteredData.length) {
+        // Return a string with two decimal places for consistency
+        return "0.00"; 
+      }
+      const total = this.filteredData.reduce((sum, row) => sum + (parseFloat(row.luas) || 0), 0);
+      // Format the final total to two decimal places
+      return total.toFixed(2);
     },
     
     avgProgress() {
@@ -845,26 +848,22 @@ export default {
     },
     
     filteredAvgProgress() {
-      // console.log('📊 [filteredAvgProgress] Menghitung rata-rata progress...');
-      // console.log('  - Jumlah filtered data:', this.filteredData?.length || 0);
-      
       if (!this.filteredData || !this.filteredData.length) {
-        // console.log('⚠️ [filteredAvgProgress] Tidak ada filtered data');
-        return 0;
+        // Return a string with two decimal places for consistency
+        return "0.00"; 
       }
       
       const totalProgress = this.filteredData.reduce((total, row) => {
         const progress = parseFloat(row.progressOverall) || 0;
-        // console.log(`    - Progress ${row.kebun} ${row.afdeling}: ${progress}%`);
         return total + progress;
       }, 0);
       
-      const avgProgress = totalProgress / this.filteredData.length;
-      // console.log('✅ [filteredAvgProgress] Rata-rata progress dihitung:', avgProgress.toFixed(2) + '%');
+      const average = totalProgress / this.filteredData.length;
       
-      return avgProgress;
+      // Format the average to two decimal places and return it
+      return average.toFixed(2);
     },
-    
+        
     avgProgressYesterday() {
       if (!this.progressDataYesterday || !this.progressDataYesterday.length) return 0;
       const totalProgress = this.progressDataYesterday.reduce((total, row) => total + (parseFloat(row.progressOverall) || 0), 0);
@@ -872,43 +871,30 @@ export default {
     },
     
     filteredAvgProgressYesterday() {
-      // console.log('📊 [filteredAvgProgressYesterday] Menghitung rata-rata progress kemarin...');
-      // console.log('  - Jumlah progress data yesterday:', this.progressDataYesterday?.length || 0);
-      
       if (!this.progressDataYesterday || !this.progressDataYesterday.length) {
-        // console.log('⚠️ [filteredAvgProgressYesterday] Tidak ada progress data yesterday');
         return 0;
       }
       
       const filteredYesterdayData = this.progressDataYesterday.filter(row => {
         if (this.filters.kebun && row.kebun !== this.filters.kebun) {
-          // console.log(`    - Skip ${row.kebun} (filter kebun: ${this.filters.kebun})`);
           return false;
         }
         if (this.filters.namaVendor && row.namaVendor !== this.filters.namaVendor) {
-          // console.log(`    - Skip ${row.namaVendor} (filter vendor: ${this.filters.namaVendor})`);
           return false;
         }
         return true;
       });
       
-      // console.log('  - Jumlah filtered yesterday data:', filteredYesterdayData.length);
-      
       if (!filteredYesterdayData.length) {
-        // console.log('⚠️ [filteredAvgProgressYesterday] Tidak ada filtered yesterday data');
         return 0;
       }
       
       const totalProgress = filteredYesterdayData.reduce((total, row) => {
         const progress = parseFloat(row.progressOverall) || 0;
-        // console.log(`    - Progress kemarin ${row.kebun} ${row.afdeling}: ${progress}%`);
         return total + progress;
       }, 0);
       
-      const avgProgress = totalProgress / filteredYesterdayData.length;
-      // console.log('✅ [filteredAvgProgressYesterday] Rata-rata progress kemarin dihitung:', avgProgress.toFixed(2) + '%');
-      
-      return avgProgress;
+      return totalProgress / filteredYesterdayData.length;
     },
     
     progressChange() {
@@ -916,25 +902,10 @@ export default {
     },
     
     filteredProgressChange() {
-      // console.log('📈 [filteredProgressChange] Menghitung perubahan progress...');
-      // console.log('  - Progress hari ini:', this.filteredAvgProgress.toFixed(2) + '%');
-      // console.log('  - Progress kemarin:', this.filteredAvgProgressYesterday.toFixed(2) + '%');
-      
-      // Jika sudah dihitung sebelumnya, kembalikan nilai yang sudah ada
-      if (this.progressCalculated && this.lastCalculatedProgressChange !== null) {
-        // console.log('✅ [filteredProgressChange] Menggunakan nilai yang sudah dihitung:', this.lastCalculatedProgressChange);
-        return this.lastCalculatedProgressChange;
-      }
-      
-      const change = this.filteredAvgProgress - this.filteredAvgProgressYesterday;
-      
-      // Simpan nilai untuk digunakan kembali
-      this.lastCalculatedProgressChange = change;
-      this.progressCalculated = true;
-      
-      // console.log('✅ [filteredProgressChange] Perubahan progress dihitung:', change.toFixed(2) + '%');
-      
-      return change;
+      // FIX: Added null checks to prevent NaN
+      const today = parseFloat(this.filteredAvgProgress) || 0;
+      const yesterday = this.filteredAvgProgressYesterday || 0;
+      return today - yesterday;
     },
     
     progressChangeType() {
@@ -945,9 +916,15 @@ export default {
       return this.filteredProgressChange >= 0 ? 'positive' : 'negative';
     },
     
-    // Computed property untuk menyimpan formatted progress change
+    // FIX: Converted to a robust computed property
     formattedProgressChange() {
-      return this.formattedProgressChange || '0%';
+      const change = this.filteredProgressChange;
+      if (change === null || change === undefined || isNaN(change)) {
+        return '0%';
+      }
+      const absChange = Math.abs(change);
+      const sign = change >= 0 ? '+' : '-';
+      return `${sign}${absChange.toFixed(2)}%`;
     },
     
     // Chart titles
@@ -978,7 +955,7 @@ export default {
       ];
     },
     
-    // Bar Chart Data
+    // CHANGE: Refactored BarChart Data to prevent merging
     barChartData() {
       if (!this.filteredData || !this.filteredData.length) {
         return {
@@ -996,39 +973,14 @@ export default {
       const dataPoints = [];
       const labels = [];
       
-      // Group data by vendor or kebun based on filters
-      const groupedData = {};
-      
-      this.filteredData.forEach(row => {
-        let key;
-        if (this.filters.kebun && this.filters.namaVendor) {
-          key = row.afdeling;
-        } else if (this.filters.namaVendor) {
-          key = `${row.kebun} - ${row.afdeling}`;
-        } else if (this.filters.kebun) {
-          key = `${row.afdeling} - ${row.namaVendor}`;
-        } else {
-          key = row.namaVendor;
-        }
-        
-        if (!groupedData[key]) {
-          groupedData[key] = {
-            totalProgress: 0,
-            count: 0,
-            totalLuas: 0
-          };
-        }
-        
-        groupedData[key].totalProgress += parseFloat(row.progressOverall) || 0;
-        groupedData[key].count += 1;
-        groupedData[key].totalLuas += parseFloat(row.luas) || 0;
-      });
-      
-      // Create data points for chart
-      Object.keys(groupedData).forEach(key => {
-        const avgProgress = groupedData[key].totalProgress / groupedData[key].count;
+      // CHANGE: Iterate directly over filteredData to avoid merging
+      this.filteredData.forEach((row, index) => {
+        const avgProgress = parseFloat(row.progressOverall) || 0;
         dataPoints.push(avgProgress);
-        labels.push(key);
+        
+        // Format label: Kebun - AFD X - Vendor Name
+        const label = `${row.kebun} - AFD ${row.afdeling} - ${row.namaVendor}`;
+        labels.push(label);
       });
       
       return {
@@ -1057,6 +1009,11 @@ export default {
               callbacks: {
                 label: function(context) {
                   return `Progress: ${context.parsed.y.toFixed(2)}%`;
+                },
+                afterLabel: function(context) {
+                  // CHANGE: Access luas directly from the original filteredData
+                  const luas = context.chart.data.filteredData[context.dataIndex].luas || 0;
+                  return `Luas: ${parseFloat(luas).toFixed(2)} ha`;
                 }
               }
             }
@@ -1065,7 +1022,7 @@ export default {
       };
     },
     
-    // Pie Chart with Needle Data
+    // CHANGE: Refactored Pie Chart with Needle Data to prevent merging
     pieWithNeedleChartData() {
       if (!this.filteredData || !this.filteredData.length) {
         return {
@@ -1082,37 +1039,14 @@ export default {
       const dataPoints = [];
       const labels = [];
       
-      // Group data by vendor or kebun based on filters
-      const groupedData = {};
-      
-      this.filteredData.forEach(row => {
-        let key;
-        if (this.filters.kebun && this.filters.namaVendor) {
-          key = row.afdeling;
-        } else if (this.filters.namaVendor) {
-          key = `${row.kebun} - ${row.afdeling}`;
-        } else if (this.filters.kebun) {
-          key = `${row.afdeling} - ${row.namaVendor}`;
-        } else {
-          key = row.namaVendor;
-        }
-        
-        if (!groupedData[key]) {
-          groupedData[key] = {
-            totalProgress: 0,
-            count: 0
-          };
-        }
-        
-        groupedData[key].totalProgress += parseFloat(row.progressOverall) || 0;
-        groupedData[key].count += 1;
-      });
-      
-      // Create data points for chart
-      Object.keys(groupedData).forEach(key => {
-        const avgProgress = groupedData[key].totalProgress / groupedData[key].count;
+      // CHANGE: Iterate directly over filteredData to avoid merging
+      this.filteredData.forEach((row) => {
+        const avgProgress = parseFloat(row.progressOverall) || 0;
         dataPoints.push(avgProgress);
-        labels.push(key);
+        
+        // Format label: Kebun - AFD X - Vendor Name
+        const label = `${row.kebun} - AFD ${row.afdeling} - ${row.namaVendor}`;
+        labels.push(label);
       });
       
       // Generate colors
@@ -1140,229 +1074,221 @@ export default {
       };
     },
     
-    // Radar Chart Data
-// Radar Chart Data
-radarChartData() {
-  if (!this.filteredData || !this.filteredData.length) {
-    return [];
-  }
-  
-  const activityLabels = [
-    'Pembuatan Parit',
-    'Pembuatan Jalan',
-    'Pembuatan Teras',
-    'Ripping',
-    'Luku',
-    'Tumbang/Chipping',
-    'Menanam Mucuna',
-    'Lubang Tanam KS',
-    'Mempupuk Lubang KS',
-    'Menanam KS'
-  ];
-  
-  const chartsData = [];
-  
-  // Group data by vendor or kebun based on filters
-  const groupedData = {};
-  
-  this.filteredData.forEach(row => {
-    let key;
-    if (this.filters.kebun && this.filters.namaVendor) {
-      key = row.afdeling;
-    } else if (this.filters.namaVendor) {
-      key = `${row.kebun} - ${row.afdeling}`;
-    } else if (this.filters.kebun) {
-      key = `${row.afdeling} - ${row.namaVendor}`;
-    } else {
-      key = row.namaVendor;
-    }
-    
-    if (!groupedData[key]) {
-      groupedData[key] = [];
-    }
-    
-    groupedData[key].push(row);
-  });
-  
-  // Create radar charts for each group
-  Object.keys(groupedData).forEach(key => {
-    const activities = [
-      { name: 'Pembuatan Parit', data: [] },
-      { name: 'Pembuatan Jalan', data: [] },
-      { name: 'Pembuatan Teras', data: [] },
-      { name: 'Ripping', data: [] },
-      { name: 'Luku', data: [] },
-      { name: 'Tumbang/Chipping', data: [] },
-      { name: 'Menanam Mucuna', data: [] },
-      { name: 'Lubang Tanam KS', data: [] },
-      { name: 'Mempupuk Lubang KS', data: [] },
-      { name: 'Menanam KS', data: [] }
-    ];
-    
-    // Calculate average progress for each activity
-    groupedData[key].forEach(row => {
-      // Ambil data dengan benar dari objek progress
-      activities[0].data.push(this.calculatePercentage(
-        this.getProgressData(row.pembuatanParit, 'sdHariIni'),
-        this.getProgressData(row.pembuatanParit, 'rencana')
-      ));
-      
-      activities[1].data.push(this.calculatePercentage(
-        this.getProgressData(row.pembuatanJalan, 'sdHariIni'),
-        this.getProgressData(row.pembuatanJalan, 'rencana')
-      ));
-      
-      activities[2].data.push(this.calculatePercentage(
-        this.getProgressData(row.pembuatanTeras, 'sdHariIni'),
-        this.getProgressData(row.pembuatanTeras, 'rencana')
-      ));
-      
-      activities[3].data.push(this.calculatePercentage(
-        this.getProgressData(row.ripping, 'sdHariIni'),
-        this.getProgressData(row.ripping, 'rencana')
-      ));
-      
-      activities[4].data.push(this.calculatePercentage(
-        this.getProgressData(row.luku, 'sdHariIni'),
-        this.getProgressData(row.luku, 'rencana')
-      ));
-      
-      activities[5].data.push(this.calculatePercentage(
-        this.getProgressData(row.tumbangChipping, 'sdHariIni'),
-        this.getProgressData(row.tumbangChipping, 'rencana')
-      ));
-      
-      activities[6].data.push(this.calculatePercentage(
-        this.getProgressData(row.menanamMucuna, 'sdHariIni'),
-        this.getProgressData(row.menanamMucuna, 'rencana')
-      ));
-      
-      activities[7].data.push(this.calculatePercentage(
-        this.getProgressData(row.lubangTanamKS, 'sdHariIni'),
-        this.getProgressData(row.lubangTanamKS, 'rencana')
-      ));
-      
-      activities[8].data.push(this.calculatePercentage(
-        this.getProgressData(row.mempupukLubangKS, 'sdHariIni'),
-        this.getProgressData(row.mempupukLubangKS, 'rencana')
-      ));
-      
-      activities[9].data.push(this.calculatePercentage(
-        this.getProgressData(row.menanamKS, 'sdHariIni'),
-        this.getProgressData(row.menanamKS, 'rencana')
-      ));
-    });
-    
-    // Calculate average for each activity
-    const activityData = activities.map(activity => {
-      const sum = activity.data.reduce((total, value) => total + value, 0);
-      return sum / activity.data.length;
-    });
-    
-    // Siapkan data untuk tooltip
-    const tooltipData = [
-      { 
-        name: 'Pembuatan Parit', 
-        rencana: this.getProgressData(groupedData[key][0].pembuatanParit, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].pembuatanParit, 'sdHariIni')
-      },
-      { 
-        name: 'Pembuatan Jalan', 
-        rencana: this.getProgressData(groupedData[key][0].pembuatanJalan, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].pembuatanJalan, 'sdHariIni')
-      },
-      { 
-        name: 'Pembuatan Teras', 
-        rencana: this.getProgressData(groupedData[key][0].pembuatanTeras, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].pembuatanTeras, 'sdHariIni')
-      },
-      { 
-        name: 'Ripping', 
-        rencana: this.getProgressData(groupedData[key][0].ripping, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].ripping, 'sdHariIni')
-      },
-      { 
-        name: 'Luku', 
-        rencana: this.getProgressData(groupedData[key][0].luku, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].luku, 'sdHariIni')
-      },
-      { 
-        name: 'Tumbang/Chipping', 
-        rencana: this.getProgressData(groupedData[key][0].tumbangChipping, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].tumbangChipping, 'sdHariIni')
-      },
-      { 
-        name: 'Menanam Mucuna', 
-        rencana: this.getProgressData(groupedData[key][0].menanamMucuna, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].menanamMucuna, 'sdHariIni')
-      },
-      { 
-        name: 'Lubang Tanam KS', 
-        rencana: this.getProgressData(groupedData[key][0].lubangTanamKS, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].lubangTanamKS, 'sdHariIni')
-      },
-      { 
-        name: 'Mempupuk Lubang KS', 
-        rencana: this.getProgressData(groupedData[key][0].mempupukLubangKS, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].mempupukLubangKS, 'sdHariIni')
-      },
-      { 
-        name: 'Menanam KS', 
-        rencana: this.getProgressData(groupedData[key][0].menanamKS, 'rencana'),
-        realisasi: this.getProgressData(groupedData[key][0].menanamKS, 'sdHariIni')
+    // CHANGE: Refactored Radar Chart Data to prevent merging and fix tooltip
+    radarChartData() {
+      if (!this.filteredData || !this.filteredData.length) {
+        return [];
       }
-    ];
-    
-    chartsData.push({
-      title: key,
-      data: {
-        labels: activityLabels,
-        datasets: [{
-          label: 'Progress (%)',
-          data: activityData,
-          backgroundColor: 'rgba(59, 130, 246, 0.2)',
-          borderColor: 'rgba(59, 130, 246, 1)',
-          pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-          pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
-        }],
-        tooltipData: tooltipData // Tambahkan data untuk tooltip
-      },
-      options: {
-        scales: {
-          r: {
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              stepSize: 20,
-              callback: function(value) {
-                return value + '%';
+      
+      const activityLabels = [
+        'Pembuatan Parit',
+        'Pembuatan Jalan',
+        'Pembuatan Teras',
+        'Ripping',
+        'Luku',
+        'Tumbang/Chipping',
+        'Menanam Mucuna',
+        'Lubang Tanam KS',
+        'Mempupuk Lubang KS',
+        'Menanam KS'
+      ];
+      
+      const chartsData = [];
+      
+      // CHANGE: Iterate directly over filteredData to create a chart for each row
+      this.filteredData.forEach(row => {
+        const activities = [
+          { name: 'Pembuatan Parit', data: [] },
+          { name: 'Pembuatan Jalan', data: [] },
+          { name: 'Pembuatan Teras', data: [] },
+          { name: 'Ripping', data: [] },
+          { name: 'Luku', data: [] },
+          { name: 'Tumbang/Chipping', data: [] },
+          { name: 'Menanam Mucuna', data: [] },
+          { name: 'Lubang Tanam KS', data: [] },
+          { name: 'Mempupuk Lubang KS', data: [] },
+          { name: 'Menanam KS', data: [] }
+        ];
+        
+        // CHANGE: Prepare detailInfo for tooltip
+        const detailInfo = [];
+
+        // Calculate percentage for each activity and populate detailInfo
+        const calculatePercentageWithZeroCheck = (current, target) => {
+          if (target === 0) return 100;
+          return this.calculatePercentage(current, target);
+        };
+        
+        detailInfo.push({
+          name: 'Pembuatan Parit', 
+          rencana: this.getProgressData(row.pembuatanParit, 'rencana'),
+          realisasi: this.getProgressData(row.pembuatanParit, 'sdHariIni')
+        });
+        activities[0].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.pembuatanParit, 'sdHariIni'),
+          this.getProgressData(row.pembuatanParit, 'rencana')
+        ));
+
+        detailInfo.push({
+          name: 'Pembuatan Jalan', 
+          rencana: this.getProgressData(row.pembuatanJalan, 'rencana'),
+          realisasi: this.getProgressData(row.pembuatanJalan, 'sdHariIni')
+        });
+        activities[1].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.pembuatanJalan, 'sdHariIni'),
+          this.getProgressData(row.pembuatanJalan, 'rencana')
+        ));
+
+        detailInfo.push({
+          name: 'Pembuatan Teras', 
+          rencana: this.getProgressData(row.pembuatanTeras, 'rencana'),
+          realisasi: this.getProgressData(row.pembuatanTeras, 'sdHariIni')
+        });
+        activities[2].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.pembuatanTeras, 'sdHariIni'),
+          this.getProgressData(row.pembuatanTeras, 'rencana')
+        ));
+        
+        detailInfo.push({
+          name: 'Ripping', 
+          rencana: this.getProgressData(row.ripping, 'rencana'),
+          realisasi: this.getProgressData(row.ripping, 'sdHariIni')
+        });
+        activities[3].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.ripping, 'sdHariIni'),
+          this.getProgressData(row.ripping, 'rencana')
+        ));
+        
+        detailInfo.push({
+          name: 'Luku', 
+          rencana: this.getProgressData(row.luku, 'rencana'),
+          realisasi: this.getProgressData(row.luku, 'sdHariIni')
+        });
+        activities[4].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.luku, 'sdHariIni'),
+          this.getProgressData(row.luku, 'rencana')
+        ));
+        
+        detailInfo.push({
+          name: 'Tumbang/Chipping', 
+          rencana: this.getProgressData(row.tumbangChipping, 'rencana'),
+          realisasi: this.getProgressData(row.tumbangChipping, 'sdHariIni')
+        });
+        activities[5].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.tumbangChipping, 'sdHariIni'),
+          this.getProgressData(row.tumbangChipping, 'rencana')
+        ));
+        
+        detailInfo.push({
+          name: 'Menanam Mucuna', 
+          rencana: this.getProgressData(row.menanamMucuna, 'rencana'),
+          realisasi: this.getProgressData(row.menanamMucuna, 'sdHariIni')
+        });
+        activities[6].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.menanamMucuna, 'sdHariIni'),
+          this.getProgressData(row.menanamMucuna, 'rencana')
+        ));
+        
+        detailInfo.push({
+          name: 'Lubang Tanam KS', 
+          rencana: this.getProgressData(row.lubangTanamKS, 'rencana'),
+          realisasi: this.getProgressData(row.lubangTanamKS, 'sdHariIni')
+        });
+        activities[7].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.lubangTanamKS, 'sdHariIni'),
+          this.getProgressData(row.lubangTanamKS, 'rencana')
+        ));
+        
+        detailInfo.push({
+          name: 'Mempupuk Lubang KS', 
+          rencana: this.getProgressData(row.mempupukLubangKS, 'rencana'),
+          realisasi: this.getProgressData(row.mempupukLubangKS, 'sdHariIni')
+        });
+        activities[8].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.mempupukLubangKS, 'sdHariIni'),
+          this.getProgressData(row.mempupukLubangKS, 'rencana')
+        ));
+        
+        detailInfo.push({
+          name: 'Menanam KS', 
+          rencana: this.getProgressData(row.menanamKS, 'rencana'),
+          realisasi: this.getProgressData(row.menanamKS, 'sdHariIni')
+        });
+        activities[9].data.push(calculatePercentageWithZeroCheck(
+          this.getProgressData(row.menanamKS, 'sdHariIni'),
+          this.getProgressData(row.menanamKS, 'rencana')
+        ));
+        
+        // Calculate average for each activity (will be the same as the single value)
+        const activityData = activities.map(activity => activity.data[0] || 0);
+        
+        // Format title: Kebun - AFD X - Vendor Name
+        const title = `${row.kebun} - AFD ${row.afdeling} - ${row.namaVendor}`;
+        
+        chartsData.push({
+          title: title,
+          data: {
+            labels: activityLabels,
+            datasets: [{
+              label: 'Progress (%)',
+              data: activityData,
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              borderColor: 'rgba(59, 130, 246, 1)',
+              pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: 'rgba(59, 130, 246, 1)',
+              // CHANGE: Add detailInfo to the dataset for the tooltip
+              tooltipData: detailInfo
+            }]
+          },
+          options: {
+            scales: {
+              r: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  stepSize: 20,
+                  callback: function(value) {
+                    return value + '%';
+                  }
+                }
+              }
+            },
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const dataIndex = context.dataIndex;
+                    const tooltipItem = context.dataset.tooltipData[dataIndex];
+                    
+                    // Get the rencana and realisasi values
+                    const rencana = tooltipItem.rencana;
+                    const realisasi = tooltipItem.realisasi;
+                    
+                    // If rencana is 0, show a special message
+                    if (rencana === 0) {
+                      return [
+                        `${context.label}: 100% (Tidak ada rencana untuk aktivitas ini)`
+                      ];
+                    }
+                    
+                    // Otherwise, show the normal tooltip
+                    return [
+                      `${context.label}: ${context.parsed.r.toFixed(2)}%`,
+                      `Rencana: ${rencana}`,
+                      `Realisasi: ${realisasi}`
+                    ];
+                  }
+                }
               }
             }
           }
-        },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const dataIndex = context.dataIndex;
-                const tooltipItem = context.chart.data.tooltipData[dataIndex];
-                return [
-                  `${context.label}: ${context.parsed.r.toFixed(2)}%`,
-                  `Rencana: ${tooltipItem.rencana}`,
-                  `Realisasi: ${tooltipItem.realisasi}`
-                ];
-              }
-            }
-          }
-        }
-      }
-    });
-  });
-  
-  return chartsData;
-},
+        });
+      });
+      
+      return chartsData;
+    },
     
     // Ranking Data
     topRankingData() {
@@ -1472,8 +1398,11 @@ radarChartData() {
     },
     
     // Regression Analysis Data
+    // FIX: Improved robustness of this computed property
     hasRegressionData() {
-      return this.regressionData && this.regressionData.activities && this.regressionData.activities && this.regressionData.activities.length > 0;
+      return !!(this.regressionData && 
+                 Array.isArray(this.regressionData.activities) && 
+                 this.regressionData.activities.length > 0);
     },
     
     comparisonDate() {
@@ -1576,10 +1505,9 @@ radarChartData() {
   methods: {
     // Metode untuk mereset flag perhitungan progress
     resetProgressCalculation() {
-      // console.log('🔄 [resetProgressCalculation] Mereset flag perhitungan progress');
       this.progressCalculated = false;
       this.lastCalculatedProgressChange = null;
-      this.formattedProgressChange = null;
+      this.initialFormattedProgressChange = null;
     },
     
     // Metode baru untuk mengambil data progress dengan aman
@@ -1600,7 +1528,7 @@ radarChartData() {
     
     formatPercentage(num) {
       if (num === null || num === undefined || isNaN(num)) return '0%';
-      return `${parseFloat(num).toFixed(1)}%`;
+      return `${parseFloat(num).toFixed(2)}%`;
     },
     
     formatDate(dateString) {
@@ -1648,23 +1576,24 @@ radarChartData() {
       return `${year}-${month}-${day}`;
     },
 
-    // Add this method to your methods section
-formatProgressChange(value) {
-  if (value === null || value === undefined || isNaN(value)) {
-    return '0%';
-  }
-  
-  const absValue = Math.abs(value);
-  const sign = value >= 0 ? '+' : '-';
-  return `${sign}${absValue.toFixed(1)}%`;
-},
+    // FIX: Ensure this method handles null/undefined values correctly
+    formatProgressChange(value) {
+      if (value === null || value === undefined || isNaN(value)) {
+        return '0%';
+      }
+      
+      const absValue = Math.abs(value);
+      const sign = value >= 0 ? '+' : '-';
+      return `${sign}${absValue.toFixed(1)}%`;
+    },
+    
     calculatePercentage(realization, plan) {
       if (!plan || plan === 0) return 0;
       return (realization / plan) * 100;
     },
     
     exportToExcelHandler() {
-      // console.log('Exporting raw data:', this.rawData);
+      console.log('Exporting raw data:', this.rawData);
       exportToExcel(this.rawData);
     },
     
@@ -1676,49 +1605,29 @@ formatProgressChange(value) {
       this.isLoading = true;
       this.errorData = '';
       try {
-        // Reset flag perhitungan progress
         this.resetProgressCalculation();
         
-        // Include date filter in API call if selected
         const params = {};
         const filterDate = this.selectedDate || this.currentDateISO;
         params.tanggal = filterDate;
         
-        // console.log('🔄 [fetchData] Mengambil data untuk tanggal:', filterDate);
+        // Gunakan fungsi API publik
+        const response = await getPublicDataTU(params);
         
-        const response = await getDataTU(params);
-        
-        // Debug log untuk melihat struktur response
-        // console.log('📊 [fetchData] Full response from API:', response);
-        // console.log('📊 [fetchData] Response data:', response.data);
-        
-        // Perbaikan: Pastikan kita mengambil data dengan benar
         this.rawData = response.data || response;
-        
-        // Debug log untuk melihat data yang disimpan
-        // console.log('💾 [fetchData] Raw data after assignment:', this.rawData);
-        // console.log('📊 [fetchData] Jumlah data yang diambil:', this.rawData?.length || 0);
-        
-        // Debug log untuk melihat tanggal yang diformat
-        if (this.rawData && this.rawData.length > 0) {
-          // console.log('📅 [fetchData] Sample data pertama:');
-          // console.log('  - Tanggal:', this.rawData[0].tanggal);
-          // console.log('  - Tanggal formatted:', this.formatDateForComparison(this.rawData[0].tanggal));
-          // console.log('  - Progress Overall:', this.rawData[0].progressOverall);
-          // console.log('  - Sample progress data:', this.rawData[0].pembuatanParit);
-        }
-        
-        // Save current data for comparison
         this.saveProgressDataToStorage();
         
-        // If we have a selected date, load comparison data
         if (this.selectedDate) {
           await this.loadComparisonData();
         }
         
-        // console.log('✅ [fetchData] Data berhasil diambil dan disimpan');
       } catch (err) {
-        this.errorData = err.response?.data?.message || 'Gagal mengambil data.';
+        // PERBAIKAN: Tangani error 401 secara spesifik
+        if (err.response && err.response.status === 401) {
+          this.errorData = 'Data ini memerlukan login untuk diakses. Silakan login terlebih dahulu.';
+        } else {
+          this.errorData = err.response?.data?.message || 'Gagal mengambil data.';
+        }
         console.error('Error fetching data:', err);
       } finally {
         this.isLoading = false;
@@ -1727,10 +1636,6 @@ formatProgressChange(value) {
     
     // Metode untuk menangani perubahan filter tanggal
     async handleDateFilter() {
-      // console.log('🔄 [handleDateFilter] Filter tanggal diubah');
-      // console.log('  - Selected date:', this.selectedDate);
-      // console.log('  - Current date ISO:', this.currentDateISO);
-      
       // Reset flag perhitungan progress
       this.resetProgressCalculation();
       
@@ -1739,12 +1644,9 @@ formatProgressChange(value) {
       // Save current data before fetching new data
       if (!this.selectedDate) {
         // If clearing date filter, save today's data for comparison
-        // console.log('💾 [handleDateFilter] Menyimpan data hari ini untuk perbandingan');
         this.comparisonData = [...this.rawData];
-        // console.log('📊 [handleDateFilter] Comparison data set:', this.comparisonData?.length || 0);
       } else {
         // If selecting a date, load today's data for comparison
-        // console.log('📥 [handleDateFilter] Memuat data hari ini untuk perbandingan');
         await this.loadTodayDataForComparison();
       }
       
@@ -1753,7 +1655,6 @@ formatProgressChange(value) {
     
     // Metode untuk menghapus filter tanggal
     async clearDateFilter() {
-      // console.log('🔄 [clearDateFilter] Filter tanggal dihapus');
       this.selectedDate = null;
       
       // Reset flag perhitungan progress
@@ -1762,7 +1663,6 @@ formatProgressChange(value) {
       this.resetPagination();
       
       // Load today's data for comparison
-      // console.log('📥 [clearDateFilter] Memuat data hari ini untuk perbandingan');
       await this.loadTodayDataForComparison();
       
       this.fetchData();
@@ -1771,26 +1671,19 @@ formatProgressChange(value) {
     // Metode untuk memuat data hari ini untuk perbandingan
     async loadTodayDataForComparison() {
       try {
-        // console.log('📥 [loadTodayDataForComparison] Memuat data hari ini...');
         const params = { tanggal: this.currentDateISO };
-        // console.log('  - Params:', params);
-        
-        const response = await getDataTU(params);
+        // Gunakan fungsi API publik
+        const response = await getPublicDataTU(params);
         this.comparisonData = response.data || response;
-        
-        // console.log('✅ [loadTodayDataForComparison] Data hari ini berhasil dimuat');
-        // console.log('  - Jumlah data:', this.comparisonData?.length || 0);
-        
-        if (this.comparisonData && this.comparisonData.length > 0) {
-          // console.log('  - Sample data comparison:', {
-          //   kebun: this.comparisonData[0].kebun,
-          //   afdeling: this.comparisonData[0].afdeling,
-          //   progressOverall: this.comparisonData[0].progressOverall
-          // });
-        }
       } catch (err) {
-        console.error('❌ [loadTodayDataForComparison] Error loading today\'s data for comparison:', err);
-        this.comparisonData = [];
+        // PERBAIKAN: Tangani error 401 secara spesifik
+        if (err.response && err.response.status === 401) {
+          console.log('Comparison data requires authentication, but this is expected for public view.');
+          this.comparisonData = []; // Set ke array kosong agar tidak error
+        } else {
+          console.error('Error loading today\'s data for comparison:', err);
+          this.comparisonData = [];
+        }
       }
     },
     
@@ -1798,11 +1691,18 @@ formatProgressChange(value) {
     async loadComparisonData() {
       try {
         const params = { tanggal: this.comparisonDate };
-        const response = await getDataTU(params);
+        // Gunakan fungsi API publik
+        const response = await getPublicDataTU(params);
         this.comparisonData = response.data || response;
       } catch (err) {
-        console.error('Error loading comparison data:', err);
-        this.comparisonData = [];
+        // PERBAIKAN: Tangani error 401 secara spesifik
+        if (err.response && err.response.status === 401) {
+          console.log('Comparison data requires authentication, but this is expected for public view.');
+          this.comparisonData = []; // Set ke array kosong agar tidak error
+        } else {
+          console.error('Error loading comparison data:', err);
+          this.comparisonData = [];
+        }
       }
     },
     
@@ -1891,8 +1791,11 @@ formatProgressChange(value) {
       });
     },
     
-    // Fungsi untuk menentukan kelas perubahan progress
+    // FIX: Ensure this method handles null/undefined values correctly
     getChangeClass(change) {
+      if (change === null || change === undefined || isNaN(change)) {
+        return 'neutral-change';
+      }
       if (change > 0) return 'positive-change';
       if (change < 0) return 'negative-change';
       return 'neutral-change';
@@ -1934,16 +1837,11 @@ formatProgressChange(value) {
     // Metode untuk localStorage
     saveProgressDataToStorage() {
       if (!this.rawData || !this.rawData.length) {
-        // console.log('⚠️ [saveProgressDataToStorage] Tidak ada data untuk disimpan');
         return;
       }
       
       const today = new Date().toISOString().split('T')[0];
       const storageKey = `progressData_${today}`;
-      
-      // console.log('💾 [saveProgressDataToStorage] Menyimpan data ke localStorage');
-      // console.log('  - Storage key:', storageKey);
-      // console.log('  - Jumlah data:', this.rawData.length);
       
       // Extract relevant progress data
       const progressData = this.rawData.map(row => ({
@@ -1966,7 +1864,6 @@ formatProgressChange(value) {
       }));
       
       localStorage.setItem(storageKey, JSON.stringify(progressData));
-      // console.log('✅ [saveProgressDataToStorage] Data berhasil disimpan ke localStorage');
     },
     
     loadProgressDataFromStorage() {
@@ -1977,31 +1874,15 @@ formatProgressChange(value) {
       const yesterdayStr = yesterday.toISOString().split('T')[0];
       const storageKey = `progressData_${yesterdayStr}`;
       
-      // console.log('📥 [loadProgressDataFromStorage] Mencoba memuat data kemarin dari localStorage');
-      // console.log('  - Storage key:', storageKey);
-      
       const storedData = localStorage.getItem(storageKey);
       
       if (storedData) {
         try {
           this.progressDataYesterday = JSON.parse(storedData);
-          // console.log('✅ [loadProgressDataFromStorage] Data kemarin berhasil dimuat');
-          // console.log('  - Jumlah data:', this.progressDataYesterday.length);
-          
-          if (this.progressDataYesterday.length > 0) {
-            // console.log('  - Sample data kemarin:', {
-            //   kebun: this.progressDataYesterday[0].kebun,
-            //   afdeling: this.progressDataYesterday[0].afdeling,
-            //   progressOverall: this.progressDataYesterday[0].progressOverall
-            // });
-          }
-          
           return true;
         } catch (err) {
-          console.error('❌ [loadProgressDataFromStorage] Error parsing stored progress data:', err);
+          console.error('Error parsing stored progress data:', err);
         }
-      } else {
-        // console.log('⚠️ [loadProgressDataFromStorage] Tidak ada data kemarin di localStorage');
       }
       
       return false;
@@ -2009,7 +1890,6 @@ formatProgressChange(value) {
   },
   watch: {
     filteredData() {
-      // console.log('🔄 [watch:filteredData] Data berubah, mereset flag perhitungan');
       this.resetProgressCalculation();
       this.resetPagination();
       
@@ -2021,43 +1901,6 @@ formatProgressChange(value) {
       if (newVal !== 'custom' && newVal !== 'all') {
         this.customItemsPerPage = newVal;
       }
-    },
-    filteredProgressChange(newValue) {
-      // console.log('📈 [watch:filteredProgressChange] Perubahan progress...');
-      // console.log('  - Progress hari ini:', this.filteredAvgProgress.toFixed(2) + '%');
-      // console.log('  - Progress kemarin:', this.filteredAvgProgressYesterday.toFixed(2) + '%');
-      
-      // Hitung ulang perubahan
-      const change = this.filteredAvgProgress - this.filteredAvgProgressYesterday;
-      
-      // Simpan nilai untuk digunakan kembali
-      this.lastCalculatedProgressChange = change;
-      this.progressCalculated = true;
-      
-      // Format perubahan progress
-      this.formattedProgressChange = this.formatProgressChange(change);
-      
-      // console.log('✅ [watch:filteredProgressChange] Perubahan progress dihitung:', change.toFixed(2) + '%');
-      
-      return change;
-    },
-    formattedProgressChange(newVal) {
-      // console.log('🎨 [formattedProgressChange] Memformat perubahan progress...');
-      // console.log('  - Input change:', newVal);
-      
-      if (newVal === null || newVal === undefined || isNaN(newVal)) {
-        // console.log('⚠️ [formattedProgressChange] Change tidak valid, mengembalikan 0%');
-        this.formattedProgressChange = '0%';
-        return '0%';
-      }
-      
-      const absChange = Math.abs(newVal);
-      const sign = newVal >= 0 ? '+' : '-';
-      const formatted = `${sign}${absChange.toFixed(1)}%`;
-      
-      // console.log('✅ [formattedProgressChange] Formatted change:', formatted);
-      
-      return formatted;
     }
   },
   async created() {
