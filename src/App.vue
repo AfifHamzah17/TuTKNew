@@ -1,3 +1,4 @@
+<!-- src/App.vue -->
 <template>
   <div id="app">
     <nav v-if="isLoggedIn" class="navbar">
@@ -5,24 +6,48 @@
         <div class="navbar-brand">
           <router-link to="/" class="brand-link">Dashboard Monitoring</router-link>
         </div>
-        <div class="navbar-menu">
-          <router-link to="/" class="nav-item">Home</router-link>
-          <router-link to="/tanaman-ulang" class="nav-item">Tanaman Ulang</router-link>
-          <router-link to="/tanaman-konversi" class="nav-item">Tanaman Konversi</router-link>
-          <router-link v-if="isAdmin" to="/admin" class="nav-item">Admin</router-link>
-          <a @click="handleLogout" class="nav-item logout">Logout</a>
-        </div>
+       <div class="navbar-menu">
+  <router-link to="/" class="nav-item">Home</router-link>
+  <router-link to="/tanaman-ulang" class="nav-item">Lihat Data Tanaman Ulang</router-link>
+  <router-link to="/tanaman-ulang/input" class="nav-item">Input Data Tanaman Ulang</router-link>
+  <router-link to="/tanaman-konversi" class="nav-item">Tanaman Konversi</router-link>
+  <router-link v-if="isAdmin" to="/admin" class="nav-item">Admin</router-link>
+  <a @click="promptLogout" class="nav-item logout">Logout</a>
+</div>
       </div>
     </nav>
     <router-view></router-view>
+
+    <!-- PERUBAHAN: Tambahkan komponen modal konfirmasi -->
+    <ConfirmModal
+      :isVisible="showLogoutModal"
+      title="Konfirmasi Logout"
+      message="Apakah Anda yakin ingin keluar dari sistem?"
+      confirmButtonText="Ya, Keluar"
+      cancelButtonText="Batal"
+      @confirm="confirmLogout"
+      @cancel="cancelLogout"
+    />
   </div>
 </template>
 
 <script>
 import { logout } from './services/authService';
+// PERUBAHAN: Import komponen ConfirmModal
+import ConfirmModal from './components/ConfirmModal.vue';
 
 export default {
   name: 'App',
+  components: {
+    // PERUBAHAN: Daftarkan komponen ConfirmModal
+    ConfirmModal
+  },
+  data() {
+    return {
+      // PERUBAHAN: Tambahkan state untuk mengontrol visibilitas modal
+      showLogoutModal: false
+    };
+  },
   computed: {
     isLoggedIn() {
       return !!localStorage.getItem('token');
@@ -33,16 +58,26 @@ export default {
     }
   },
   methods: {
-    handleLogout() {
-      logout();
-      this.$router.push('/login');
+    // PERUBAHAN: Method ini dipanggil saat link logout diklik
+    promptLogout() {
+      this.showLogoutModal = true;
+    },
+    // PERUBAHAN: Method ini dipanggil jika user mengkonfirmasi logout
+    confirmLogout() {
+      this.showLogoutModal = false; // Sembunyikan modal
+      logout(); // Jalankan fungsi logout
+      this.$router.push('/login'); // Redirect ke halaman login
+    },
+    // PERUBAHAN: Method ini dipanggil jika user membatalkan logout
+    cancelLogout() {
+      this.showLogoutModal = false; // Cukup sembunyikan modal
     }
   }
 }
 </script>
 
 <style>
-/* Global styles */
+/* ... (Style global Anda tetap sama, tidak perlu diubah) ... */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 body {

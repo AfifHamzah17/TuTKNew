@@ -1,43 +1,17 @@
-// import { createRouter, createWebHistory } from 'vue-router';
-// import Home from './pages/Home.vue'; // Buat file Home.vue baru
-// import TanamanUlang from './pages/TanamanUlang.vue';
-// import TanamanKonversi from './pages/TanamanKonversi.vue';
-
-// const routes = [
-//   {
-//     path: '/',
-//     name: 'Home',
-//     component: Home
-//   },
-//   {
-//     path: '/tanaman-ulang',
-//     name: 'TanamanUlang',
-//     component: TanamanUlang
-//   },
-//   {
-//     path: '/tanaman-konversi',
-//     name: 'TanamanKonversi',
-//     component: TanamanKonversi
-//   },
-// ];
-
-// const router = createRouter({
-//   history: createWebHistory(),
-//   routes
-// });
-
-// export default router;
-
-
-// src/router.js
 import { createRouter, createWebHistory } from 'vue-router';
+
+// --- IMPORT KOMPONEN HALAMAN ---
 import Home from './pages/Home.vue';
-import TanamanUlang from './pages/TanamanUlang.vue';
+import TanamanUlang from './pages/TanamanUlang.vue'; // Halaman untuk melihat data
+import TanamanUlangView from './pages/TanamanUlangView.vue'; // Halaman baru untuk view data dengan tabel
 import TanamanKonversi from './pages/TanamanKonversi.vue';
 import Login from './pages/Login.vue';
 import Register from './pages/Register.vue';
-// import AdminDashboard from './pages/AdminDashboard.vue';
+import AdminDashboard from './pages/AdminDashboard.vue'; 
+import DataEntry from './pages/DataEntry.vue'; // Komponen entry data dinamis
+import TanamanUlangKrani from './pages/TanamanUlangKrani.vue'; // Komponen input data untuk Krani
 
+// --- DEFINISI ROUTE ---
 const routes = [
   {
     path: '/',
@@ -52,47 +26,83 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/tanaman-ulang/view',
+    name: 'TanamanUlangView',
+    component: TanamanUlangView,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/tanaman-konversi',
     name: 'TanamanKonversi',
     component: TanamanKonversi,
     meta: { requiresAuth: true }
+  },
+  {
+    // Route baru untuk halaman input data oleh Krani
+    path: '/tanaman-ulang/input',
+    name: 'InputTanamanUlang',
+    component: TanamanUlangKrani,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register
+  },
+  {
+    path: '/admin',
+    name: 'AdminDashboard',
+    component: AdminDashboard,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    // Route dinamis (jika masih dibutuhkan untuk konversi)
+    path: '/data-entry/:type', 
+    name: 'DataEntry',
+    component: DataEntry,
+    meta: { requiresAuth: true }
+  },
+  {
+    // Rute catch-all untuk mengarahkan ke home jika URL tidak ditemukan
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
   }
-  // {
-  //   path: '/login',
-  //   name: 'Login',
-  //   component: Login
-  // },
-  // {
-  //   path: '/register',
-  //   name: 'Register',
-  //   component: Register
-  // }
-  // {
-  //   path: '/admin',
-  //   name: 'Admin',
-  //   component: AdminDashboard,
-  //   meta: { requiresAuth: true, requiresAdmin: true }
-  // }
 ];
 
+// --- BUAT INSTANCE ROUTER ---
 const router = createRouter({
   history: createWebHistory(),
   routes
 });
 
-// // Navigation guard untuk autentikasi
-// router.beforeEach((to, from, next) => {
-//   const isAuthenticated = !!localStorage.getItem('token');
-//   const user = JSON.parse(localStorage.getItem('user') || '{}');
-//   const isAdmin = user.role === 'admin';
+// --- NAVIGATION GUARD UNTUK AUTENTIKASI ---
+router.beforeEach((to, from, next) => {
+  // Mendapatkan status autentikasi dan data user dari localStorage
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAuthenticated = user && user.token;
+  const isAdmin = user.role === 'admin';
   
-//   if (to.meta.requiresAuth && !isAuthenticated) {
-//     next('/login');
-//   } else if (to.meta.requiresAdmin && !isAdmin) {
-//     next('/'); // Redirect ke home jika bukan admin
-//   } else {
-//     next();
-//   }
-// });
+  // Jika rute dituju memerlukan autentikasi dan pengguna belum login
+  if (to.matched.some(record => record.meta.requiresAuth) && !isAuthenticated) {
+    next('/login');
+  } 
+  // Jika rute dituju memerlukan admin dan pengguna bukan admin
+  else if (to.matched.some(record => record.meta.requiresAdmin) && !isAdmin) {
+    next('/');
+  } 
+  // Jika pengguna sudah login tapi mencoba akses halaman login/register
+  else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
+    next('/');
+  }
+  // Jika semua syarat terpenuhi, izinkan navigasi
+  else {
+    next();
+  }
+});
 
 export default router;

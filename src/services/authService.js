@@ -1,7 +1,8 @@
 // src/services/authService.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api'; // Sesuaikan dengan URL backend Anda
+// PASTIKAN PORT ANDA BENAR! Sesuaikan dengan backend yang berjalan.
+const API_URL = 'http://localhost:8080/api'; 
 
 // Set token ke header axios
 const setAuthHeader = (token) => {
@@ -17,12 +18,48 @@ if (localStorage.getItem('token')) {
   setAuthHeader(localStorage.getItem('token'));
 }
 
+// --- FUNGSI UTILITAS ---
+
+// Fungsi untuk generate ID acak 16 karakter
+export const generateDocId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 16; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+// Fungsi untuk validasi dan normalisasi nomor HP
+export const validateAndNormalizePhone = (phone) => {
+  // Hapus semua karakter kecuali angka
+  let normalizedPhone = phone.replace(/\D/g, '');
+
+  // Jika dimulai dengan '0', ganti dengan '62'
+  if (normalizedPhone.startsWith('0')) {
+    normalizedPhone = '62' + normalizedPhone.substring(1);
+  }
+  // Jika tidak memenuhi syarat, return null
+  else if (!normalizedPhone.startsWith('62')) {
+    return null;
+  }
+
+  // Validasi panjang (10-15 digit setelah normalisasi)
+  if (normalizedPhone.length < 10 || normalizedPhone.length > 15) {
+    return null;
+  }
+
+  return normalizedPhone;
+};
+
+// --- FUNGSI AUTENTIKASI ---
+
 export const login = async (credentials) => {
   try {
     const response = await axios.post(`${API_URL}/auth/login`, credentials);
     const { token, user } = response.data;
     
-    // Simpan token ke localStorage
+    // Simpan token ke localStorage HANYA SAAT LOGIN
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     
@@ -36,18 +73,14 @@ export const login = async (credentials) => {
   }
 };
 
+// FUNGSI REGISTER YANG BENAR (TIDAK MENYIMPAN TOKEN)
 export const register = async (userData) => {
   try {
     const response = await axios.post(`${API_URL}/auth/register`, userData);
-    const { token, user } = response.data;
     
-    // Simpan token ke localStorage
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    
-    // Set token ke header axios
-    setAuthHeader(token);
-    
+    // JANGAN SIMPAN APA-APA KE LOCALSTORAGE DI SINI
+    // Backend tidak lagi mengembalikan token saat register
+    // Hanya kembalikan respons dari server.
     return response.data;
   } catch (error) {
     console.error('Error during registration:', error);
