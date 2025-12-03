@@ -4,8 +4,10 @@
     <header>
       <h1>Input Data Tanaman Ulang</h1>
       <p>Kebun: <strong>{{ currentUser.kebun }}</strong> | Krani: <strong>{{ currentUser.name }}</strong></p>
+      <p class="mt-4 text-lg font-medium">
+      </p>
       <div class="nav-links">
-        <router-link to="/tanaman-ulang/view" class="nav-link">Lihat Data</router-link>
+       
       </div>
     </header>
 
@@ -95,183 +97,237 @@
       </button>
     </form>
 
-    <!-- Bagian untuk menampilkan data yang sudah diinput -->
-    <section class="data-display-section">
-      <div class="section-header">
-        <h2>Data yang Telah Diinput</h2>
-        <button @click="toggleFilter" class="filter-toggle-btn" :class="{ active: showFilter }">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="22 3 2 3 10 12.46 10 19 14 16 14 12.46 22 3"></polygon>
+<section class="data-display-section">
+  <div class="section-header">
+    <h2>Data yang Telah Diinput</h2>
+    <button @click="toggleFilter" class="filter-toggle-btn" :class="{ active: showFilter }">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="22 3 2 3 10 12.46 10 19 14 16 14 12.46 22 3"></polygon>
+      </svg>
+      Filter
+    </button>
+  </div>
+  
+  <!-- Filter Section -->
+  <div v-if="showFilter" class="filter-section">
+    <div class="filter-controls">
+      <!-- Filter Kebun -->
+      <div class="filter-group">
+        <label>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 2 9 9 15 13"></polyline>
           </svg>
-          Filter
-        </button>
+          Kebun
+        </label>
+        <select v-model="filters.kebun">
+          <option value="">Semua Kebun</option>
+          <option v-for="kebun in uniqueKebunOptions" :key="kebun" :value="kebun">
+            {{ kebun }}
+          </option>
+        </select>
       </div>
-      
-      <!-- Filter Section -->
-      <div v-if="showFilter" class="filter-section">
-        <div class="filter-controls">
-          <!-- Filter Kebun -->
-          <div class="filter-group">
-            <label>Kebun</label>
-            <select v-model="filters.kebun">
-              <option value="">Semua Kebun</option>
-              <option v-for="kebun in uniqueKebunOptions" :key="kebun" :value="kebun">
-                {{ kebun }}
-              </option>
-            </select>
-          </div>
 
-          <!-- Filter Tanggal -->
-          <div class="filter-group">
-            <label>Tanggal</label>
-            <div class="date-options">
-              <label>
-                <input type="radio" value="all" v-model="filters.dateType" /> Semua
-              </label>
-              <label>
-                <input type="radio" value="today" v-model="filters.dateType" /> Hari Ini
-              </label>
-              <label>
-                <input type="radio" value="range" v-model="filters.dateType" /> Rentang
-              </label>
-              <label>
-                <input type="radio" value="custom" v-model="filters.dateType" /> Tanggal Kustom
-              </label>
-            </div>
-            <div v-if="filters.dateType === 'range'" class="date-range-inputs">
-              <input type="date" v-model="filters.startDate" />
-              <span>s/d</span>
-              <input type="date" v-model="filters.endDate" />
-            </div>
-            <div v-if="filters.dateType === 'custom'" class="custom-date-inputs">
-              <input type="date" v-model="filters.customDate" />
-            </div>
-          </div>
+      <!-- Filter Tanggal -->
+      <div class="filter-group">
+        <label>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          Tanggal
+        </label>
+        <select v-model="filters.dateType" @change="resetDateInputs">
+          <option value="all">Semua Tanggal</option>
+          <option value="today">Hari Ini</option>
+          <option value="yesterday">Kemarin</option>
+          <option value="week">7 Hari Terakhir</option>
+          <option value="month">30 Hari Terakhir</option>
+          <option value="range">Rentang Tanggal</option>
+        </select>
+      </div>
 
-          <!-- Filter No. Urut -->
-          <div class="filter-group">
-            <label>No. Urut</label>
-            <select v-model="filters.noUrut">
-              <option value="">Semua No. Urut</option>
-              <option v-for="no in uniqueNoUrutOptions" :key="no" :value="no">{{ no }}</option>
-            </select>
-          </div>
-
-          <!-- Filter Vendor -->
-          <div class="filter-group">
-            <label>Vendor</label>
-            <select v-model="filters.vendor">
-              <option value="">Semua Vendor</option>
-              <option v-for="vendor in uniqueVendorOptions" :key="vendor" :value="vendor">{{ vendor }}</option>
-            </select>
-          </div>
-
-          <!-- Filter Afdeling -->
-          <div class="filter-group">
-            <label>Afdeling</label>
-            <select v-model="filters.afdeling">
-              <option value="">Semua Afdeling</option>
-              <option v-for="afdeling in uniqueAfdelingOptions" :key="afdeling" :value="afdeling">{{ afdeling }}</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="filter-actions">
-          <button @click="applyFilters" class="btn btn-primary btn-sm">Terapkan</button>
-          <button @click="resetFilters" class="btn btn-secondary btn-sm">Reset</button>
+      <!-- Rentang Tanggal (muncul jika pilih rentang) -->
+      <div v-if="filters.dateType === 'range'" class="filter-group date-range-group">
+        <label>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 2v4"></path>
+            <path d="M16 2v4"></path>
+            <rect x="3" y="6" width="18" height="12" rx="2"></rect>
+          </svg>
+          Rentang
+        </label>
+        <div class="date-range-inputs">
+          <input type="date" v-model="filters.startDate" placeholder="Dari" />
+          <span>s/d</span>
+          <input type="date" v-model="filters.endDate" placeholder="Sampai" />
         </div>
       </div>
-      
-      <div v-if="isLoadingData" class="loading-container">
-        <div class="spinner"></div>
-        <p>Mengambil data...</p>
+
+      <!-- Filter No. Urut -->
+      <div class="filter-group">
+        <label>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          No. Urut
+        </label>
+        <select v-model="filters.noUrut">
+          <option value="">Semua No. Urut</option>
+          <option v-for="no in uniqueNoUrutOptions" :key="no" :value="no">{{ no }}</option>
+        </select>
       </div>
 
-      <div v-else-if="errorData" class="alert alert-error">
-        {{ errorData }}
+      <!-- Filter Afdeling -->
+      <div class="filter-group">
+        <label>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3h18v18H3zM12 8v13"></path>
+            <path d="M12 8l-3-3v6z"></path>
+          </svg>
+          Afdeling
+        </label>
+        <select v-model="filters.afdeling">
+          <option value="">Semua Afdeling</option>
+          <option v-for="afdeling in uniqueAfdelingOptions" :key="afdeling" :value="afdeling">{{ afdeling }}</option>
+        </select>
       </div>
 
-      <div v-else-if="filteredDataList.length === 0" class="no-data">
-        <p>Belum ada data yang diinput untuk kebun {{ currentUser.kebun }}.</p>
+      <!-- Opsi Pengurutan -->
+      <div class="filter-group">
+        <label>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"></path>
+            <path d="M7 12h10"></path>
+            <path d="M10 18h4"></path>
+          </svg>
+          Urutkan
+        </label>
+        <select v-model="filters.sortBy">
+          <option value="date-desc">Terbaru</option>
+          <option value="date-asc">Terlama</option>
+          <option value="no-asc">No. Urut (A-Z)</option>
+          <option value="no-desc">No. Urut (Z-A)</option>
+          <option value="progress-desc">Progress Tertinggi</option>
+          <option value="progress-asc">Progress Terendah</option>
+        </select>
       </div>
+    </div>
+    
+    <div class="filter-actions">
+      <button @click="applyFilters" class="btn btn-primary btn-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+          <path d="M20 6l-7 13-5-5"></path>
+        </svg>
+        Terapkan
+      </button>
+      <button @click="resetFilters" class="btn btn-secondary btn-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 4v6h6"></path>
+          <path d="M23 20v-6h-6"></path>
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64l1.27-1.27m4.16 4.16l1.27-1.27m3.36 3.36l1.27-1.27A9 9 0 0 0 20.49 9z"></path>
+        </svg>
+        Reset
+      </button>
+    </div>
+  </div>
+  
+  <div v-if="isLoadingData" class="loading-container">
+    <div class="spinner"></div>
+    <p>Mengambil data...</p>
+  </div>
 
-      <div v-else class="data-cards-grid">
-        <div v-for="item in filteredDataList" :key="item.docId" class="data-card">
-          <div class="card-header">
-            <h3>{{ formatDate(item.tanggal) }}</h3>
-            <h3>{{ formatDate(item.kebun) }}</h3>
-            <span class="badge">{{ item.afdeling }}</span>
+  <div v-else-if="errorData" class="alert alert-error">
+    {{ errorData }}
+  </div>
+
+  <div v-else-if="filteredDataList.length === 0" class="no-data">
+    <p>Belum ada data yang diinput untuk kebun {{ currentUser.kebun }}.</p>
+  </div>
+
+  <div v-else class="data-cards-grid">
+    <div v-for="item in filteredDataList" :key="item.docId" class="data-card">
+      <div class="card-header">
+        <h3>{{ formatDateTime(item.tanggal) }}</h3>
+        <h3>{{item.kebun }}</h3>
+        <span class="badge">{{ item.afdeling }}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-row">
+          <div class="card-item">
+              <strong>No. Urut:</strong>
+              <span>{{ item.no }}</span>
           </div>
-          <div class="card-body">
-            <div class="card-row">
-              <div class="card-item">
-                  <strong>No. Urut:</strong>
-                  <span>{{ item.no }}</span>
-              </div>
-              <div class="card-item">
-                <strong>Nama Vendor:</strong>
-                <span>{{ item.namaVendor }}</span>
-              </div>
-            </div>
-            <div class="card-row">
-              <div class="card-item">
-                <strong>Luas (Ha):</strong>
-                <span>{{ formatNumber(item.luas) }}</span>
-              </div>
-              <div class="card-item">
-                <strong>Progress Overall:</strong>
-                <span>{{ formatNumber(item.progressOverall) }}%</span>
-              </div>
-            </div>
-            <div class="card-row">
-              <div class="card-item">
-                <strong>Pembuatan Parit (Mtr):</strong>
-                <span>{{ formatNumber(item.pembuatanParit?.sdHariIni || 0) }}</span>
-              </div>
-              <div class="card-item">
-                <strong>Pembuatan Jalan (Mtr):</strong>
-                <span>{{ formatNumber(item.pembuatanJalan?.sdHariIni || 0) }}</span>
-              </div>
-            </div>
-            <div class="card-row">
-              <div class="card-item">
-                <strong>Ripping (Ha):</strong>
-                <span>{{ formatNumber(item.ripping?.sdHariIni || 0) }}</span>
-              </div>
-              <div class="card-item">
-                <strong>Luku (Ha):</strong>
-                <span>{{ formatNumber(item.luku?.sdHariIni || 0) }}</span>
-              </div>
-            </div>
-            <div class="card-row">
-              <div class="card-item">
-                <strong>Tanggal SPPBJ:</strong>
-                <span>{{ formatDate(item.tanggalSPPBJ) }}</span>
-              </div>
-              <div class="card-item">
-                <strong>Durasi Kerja (Hari):</strong>
-                <span>{{ item.durasiKerja }}</span>
-              </div>
-            </div>
-            <div class="card-actions">
-              <button @click="openEditModal(item)" class="btn btn-secondary btn-sm">
-                Edit Data
-              </button>
-              <button @click="confirmDelete(item.docId)" class="btn btn-danger btn-sm">
-                Hapus
-              </button>
-              <button 
-                v-if="!isToday(item.tanggal)" 
-                @click="updateForToday(item)" 
-                class="btn btn-primary btn-sm"
-              >
-                Perbarui Data untuk Hari Ini
-              </button>
-            </div>
+          <div class="card-item">
+            <strong>Nama Vendor:</strong>
+            <span>{{ item.namaVendor }}</span>
           </div>
         </div>
+        <div class="card-row">
+          <div class="card-item">
+            <strong>Luas (Ha):</strong>
+            <span>{{ formatNumber(item.luas) }}</span>
+          </div>
+          <div class="card-item">
+            <strong>Progress Overall:</strong>
+            <span>{{ formatNumber(item.progressOverall) }}%</span>
+          </div>
+        </div>
+        <div class="card-row">
+          <div class="card-item">
+            <strong>Pembuatan Parit (Mtr):</strong>
+            <span>{{ formatNumber(item.pembuatanParit?.sdHariIni || 0) }}</span>
+          </div>
+          <div class="card-item">
+            <strong>Pembuatan Jalan (Mtr):</strong>
+            <span>{{ formatNumber(item.pembuatanJalan?.sdHariIni || 0) }}</span>
+          </div>
+        </div>
+        <div class="card-row">
+          <div class="card-item">
+            <strong>Ripping (Ha):</strong>
+            <span>{{ formatNumber(item.ripping?.sdHariIni || 0) }}</span>
+          </div>
+          <div class="card-item">
+            <strong>Luku (Ha):</strong>
+            <span>{{ formatNumber(item.luku?.sdHariIni || 0) }}</span>
+          </div>
+        </div>
+        <div class="card-row">
+          <div class="card-item">
+            <strong>Tanggal SPPBJ:</strong>
+            <span>{{ formatDate(item.tanggalSPPBJ) }}</span>
+          </div>
+          <div class="card-item">
+            <strong>Durasi Kerja (Hari):</strong>
+            <span>{{ item.durasiKerja }}</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button @click="openEditModal(item)" class="btn btn-secondary btn-sm">
+            Edit Data
+          </button>
+          <button @click="confirmDelete(item.docId)" class="btn btn-danger btn-sm">
+            Hapus
+          </button>
+          <button 
+            v-if="!isToday(item.tanggal)" 
+            @click="updateForToday(item)" 
+            class="btn btn-primary btn-sm"
+          >
+            Perbarui Data untuk Hari Ini
+          </button>
+        </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
     <!-- Modal untuk Edit Data -->
     <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
@@ -537,400 +593,400 @@
               </form>
             </div>
             
-<!-- Tab Content untuk Import Excel -->
-  <div v-if="activeTab === 'excel'" class="tab-content">
-    <div class="excel-import-container">
-      <!-- Dokumentasi Format Excel -->
-      <div class="excel-documentation">
-        <div class="documentation-header">
-          <h4>Dokumentasi Format Excel</h4>
-          <button @click="downloadTemplate" class="btn btn-sm btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Unduh Template
-          </button>
-        </div>
-        
-        <div class="documentation-content">
-          <p>Pastikan file Excel Anda mengikuti format berikut:</p>
-          
-          <div class="documentation-table-container">
-            <table class="documentation-table">
-              <thead>
-                <tr>
-                  <th>Kolom</th>
-                  <th>Label</th>
-                  <th>Contoh</th>
-                  <th>Keterangan</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="col-letter">A</td>
-                  <td>No</td>
-                  <td>1</td>
-                  <td>Nomor urut unik untuk setiap data</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">B</td>
-                  <td>Kebun</td>
-                  <td>1KLJ</td>
-                  <td>Nama kebun</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">C</td>
-                  <td>AFD</td>
-                  <td>I</td>
-                  <td>Kode afdeling (I, II, III, IV, V, VI, VII, VIII, IX, X)</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">D</td>
-                  <td>Nama Vendor</td>
-                  <td>PT. Maju Jaya</td>
-                  <td>Nama vendor/penyedia jasa</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">E</td>
-                  <td>Luas Paket (ha)</td>
-                  <td>56,73</td>
-                  <td>Luas area dalam hektar (gunakan koma atau titik untuk desimal)</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">F</td>
-                  <td>Ripper (ha) Rencana</td>
-                  <td>36,44</td>
-                  <td>Luas rencana untuk Ripper dalam hektar</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">G</td>
-                  <td>Ripper (ha) SdHi</td>
-                  <td>36,44</td>
-                  <td>Luas Ripper yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">H</td>
-                  <td>Luku (ha) Rencana</td>
-                  <td>36,44</td>
-                  <td>Luas rencana untuk Luku dalam hektar</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">I</td>
-                  <td>Luku (ha) SdHi</td>
-                  <td>36,44</td>
-                  <td>Luas Luku yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">J</td>
-                  <td>Tumbang/Chipping (ha) Rencana</td>
-                  <td>56,73</td>
-                  <td>Luas rencana untuk Tumbang/Chipping dalam hektar</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">K</td>
-                  <td>Tumbang/Chipping (ha) SdHi</td>
-                  <td>56,73</td>
-                  <td>Luas Tumbang/Chipping yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">L</td>
-                  <td>Pembuatan Parit (Mtr) Rencana</td>
-                  <td>3318</td>
-                  <td>Panjang rencana untuk Pembuatan Parit dalam meter</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">M</td>
-                  <td>Pembuatan Parit (Mtr) SdHi</td>
-                  <td>3275</td>
-                  <td>Panjang Pembuatan Parit yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">N</td>
-                  <td>Menanam Mucuna (ha) Rencana</td>
-                  <td>56,73</td>
-                  <td>Luas rencana untuk Menanam Mucuna dalam hektar</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">O</td>
-                  <td>Menanam Mucuna (ha) SdHi</td>
-                  <td>31,00</td>
-                  <td>Luas Menanam Mucuna yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">P</td>
-                  <td>Melubang Tanam (ha) Rencana</td>
-                  <td>56,73</td>
-                  <td>Luas rencana untuk Melubang Tanam dalam hektar</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">Q</td>
-                  <td>Melubang Tanam (ha) SdHi</td>
-                  <td>26,86</td>
-                  <td>Luas Melubang Tanam yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">R</td>
-                  <td>Memupuk Lubang Tanam (ha) Rencana</td>
-                  <td>56,73</td>
-                  <td>Luas rencana untuk Memupuk Lubang Tanam dalam hektar</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">S</td>
-                  <td>Memupuk Lubang Tanam (ha) SdHi</td>
-                  <td>14,00</td>
-                  <td>Luas Memupuk Lubang Tanam yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">T</td>
-                  <td>Menanam KS (ha) Rencana</td>
-                  <td>56,73</td>
-                  <td>Luas rencana untuk Menanam KS dalam hektar</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">U</td>
-                  <td>Menanam KS (ha) SdHi</td>
-                  <td>13,36</td>
-                  <td>Luas Menanam KS yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">V</td>
-                  <td>Pembuatan Teras (Mtr) Rencana</td>
-                  <td>800</td>
-                  <td>Panjang rencana untuk Pembuatan Teras dalam meter</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">W</td>
-                  <td>Pembuatan Teras (Mtr) Sd Hari Ini</td>
-                  <td>750</td>
-                  <td>Panjang Pembuatan Teras yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">X</td>
-                  <td>Pembuatan Jalan (Mtr) Rencana</td>
-                  <td>1200</td>
-                  <td>Panjang rencana untuk Pembuatan Jalan dalam meter</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">Y</td>
-                  <td>Pembuatan Jalan (Mtr) Sd Hari Ini</td>
-                  <td>1150</td>
-                  <td>Panjang Pembuatan Jalan yang sudah dikerjakan hingga hari ini</td>
-                </tr>
-                <tr>
-                  <td class="col-letter">Z</td>
-                  <td>Tanggal SPPBJ</td>
-                  <td>2024-11-01</td>
-                  <td>Format tanggal: YYYY-MM-DD atau DD/MM/YYYY atau DD-MM-YYYY</td>
-                </tr>
-              </tbody>
-            </table>
+            <!-- Tab Content untuk Import Excel -->
+            <div v-if="activeTab === 'excel'" class="tab-content">
+              <div class="excel-import-container">
+                <!-- Dokumentasi Format Excel -->
+                <div class="excel-documentation">
+                  <div class="documentation-header">
+                    <h4>Dokumentasi Format Excel</h4>
+                    <button @click="downloadTemplate" class="btn btn-sm btn-primary">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                      </svg>
+                      Unduh Template
+                    </button>
+                  </div>
+                  
+                  <div class="documentation-content">
+                    <p>Pastikan file Excel Anda mengikuti format berikut:</p>
+                    
+                    <div class="documentation-table-container">
+                      <table class="documentation-table">
+                        <thead>
+                          <tr>
+                            <th>Kolom</th>
+                            <th>Label</th>
+                            <th>Contoh</th>
+                            <th>Keterangan</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td class="col-letter">A</td>
+                            <td>No</td>
+                            <td>1</td>
+                            <td>Nomor urut unik untuk setiap data</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">B</td>
+                            <td>Kebun</td>
+                            <td>1KLJ</td>
+                            <td>Nama kebun</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">C</td>
+                            <td>AFD</td>
+                            <td>I</td>
+                            <td>Kode afdeling (I, II, III, IV, V, VI, VII, VIII, IX, X)</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">D</td>
+                            <td>Nama Vendor</td>
+                            <td>PT. Maju Jaya</td>
+                            <td>Nama vendor/penyedia jasa</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">E</td>
+                            <td>Luas Paket (ha)</td>
+                            <td>56,73</td>
+                            <td>Luas area dalam hektar (gunakan koma atau titik untuk desimal)</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">F</td>
+                            <td>Ripper (ha) Rencana</td>
+                            <td>36,44</td>
+                            <td>Luas rencana untuk Ripper dalam hektar</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">G</td>
+                            <td>Ripper (ha) SdHi</td>
+                            <td>36,44</td>
+                            <td>Luas Ripper yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">H</td>
+                            <td>Luku (ha) Rencana</td>
+                            <td>36,44</td>
+                            <td>Luas rencana untuk Luku dalam hektar</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">I</td>
+                            <td>Luku (ha) SdHi</td>
+                            <td>36,44</td>
+                            <td>Luas Luku yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">J</td>
+                            <td>Tumbang/Chipping (ha) Rencana</td>
+                            <td>56,73</td>
+                            <td>Luas rencana untuk Tumbang/Chipping dalam hektar</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">K</td>
+                            <td>Tumbang/Chipping (ha) SdHi</td>
+                            <td>56,73</td>
+                            <td>Luas Tumbang/Chipping yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">L</td>
+                            <td>Pembuatan Parit (Mtr) Rencana</td>
+                            <td>3318</td>
+                            <td>Panjang rencana untuk Pembuatan Parit dalam meter</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">M</td>
+                            <td>Pembuatan Parit (Mtr) SdHi</td>
+                            <td>3275</td>
+                            <td>Panjang Pembuatan Parit yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">N</td>
+                            <td>Menanam Mucuna (ha) Rencana</td>
+                            <td>56,73</td>
+                            <td>Luas rencana untuk Menanam Mucuna dalam hektar</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">O</td>
+                            <td>Menanam Mucuna (ha) SdHi</td>
+                            <td>31,00</td>
+                            <td>Luas Menanam Mucuna yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">P</td>
+                            <td>Melubang Tanam (ha) Rencana</td>
+                            <td>56,73</td>
+                            <td>Luas rencana untuk Melubang Tanam dalam hektar</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">Q</td>
+                            <td>Melubang Tanam (ha) SdHi</td>
+                            <td>26,86</td>
+                            <td>Luas Melubang Tanam yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">R</td>
+                            <td>Memupuk Lubang Tanam (ha) Rencana</td>
+                            <td>56,73</td>
+                            <td>Luas rencana untuk Memupuk Lubang Tanam dalam hektar</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">S</td>
+                            <td>Memupuk Lubang Tanam (ha) SdHi</td>
+                            <td>14,00</td>
+                            <td>Luas Memupuk Lubang Tanam yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">T</td>
+                            <td>Menanam KS (ha) Rencana</td>
+                            <td>56,73</td>
+                            <td>Luas rencana untuk Menanam KS dalam hektar</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">U</td>
+                            <td>Menanam KS (ha) SdHi</td>
+                            <td>13,36</td>
+                            <td>Luas Menanam KS yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">V</td>
+                            <td>Pembuatan Teras (Mtr) Rencana</td>
+                            <td>800</td>
+                            <td>Panjang rencana untuk Pembuatan Teras dalam meter</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">W</td>
+                            <td>Pembuatan Teras (Mtr) Sd Hari Ini</td>
+                            <td>750</td>
+                            <td>Panjang Pembuatan Teras yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">X</td>
+                            <td>Pembuatan Jalan (Mtr) Rencana</td>
+                            <td>1200</td>
+                            <td>Panjang rencana untuk Pembuatan Jalan dalam meter</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">Y</td>
+                            <td>Pembuatan Jalan (Mtr) Sd Hari Ini</td>
+                            <td>1150</td>
+                            <td>Panjang Pembuatan Jalan yang sudah dikerjakan hingga hari ini</td>
+                          </tr>
+                          <tr>
+                            <td class="col-letter">Z</td>
+                            <td>Tanggal SPPBJ</td>
+                            <td>2024-11-01</td>
+                            <td>Format tanggal: YYYY-MM-DD atau DD/MM/YYYY atau DD-MM-YYYY</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div class="example-section">
+                      <h5>Contoh Data Excel:</h5>
+                      <div class="example-table-container">
+                        <table class="example-table">
+                          <thead>
+                            <tr>
+                              <th class="col-header">A</th>
+                              <th class="col-header">B</th>
+                              <th class="col-header">C</th>
+                              <th class="col-header">D</th>
+                              <th class="col-header">E</th>
+                              <th class="col-header">F</th>
+                              <th class="col-header">G</th>
+                              <th class="col-header">H</th>
+                              <th class="col-header">I</th>
+                              <th class="col-header">J</th>
+                              <th class="col-header">K</th>
+                              <th class="col-header">L</th>
+                              <th class="col-header">M</th>
+                              <th class="col-header">N</th>
+                              <th class="col-header">O</th>
+                              <th class="col-header">P</th>
+                              <th class="col-header">Q</th>
+                              <th class="col-header">R</th>
+                              <th class="col-header">S</th>
+                              <th class="col-header">T</th>
+                              <th class="col-header">U</th>
+                              <th class="col-header">V</th>
+                              <th class="col-header">W</th>
+                              <th class="col-header">X</th>
+                              <th class="col-header">Y</th>
+                              <th class="col-header">Z</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>1</td>
+                              <td>1KLJ</td>
+                              <td>I</td>
+                              <td>PT. Maju Jaya</td>
+                              <td>56,73</td>
+                              <td>36,44</td>
+                              <td>36,44</td>
+                              <td>36,44</td>
+                              <td>36,44</td>
+                              <td>56,73</td>
+                              <td>56,73</td>
+                              <td>3318</td>
+                              <td>3275</td>
+                              <td>56,73</td>
+                              <td>31,00</td>
+                              <td>56,73</td>
+                              <td>26,86</td>
+                              <td>56,73</td>
+                              <td>14,00</td>
+                              <td>56,73</td>
+                              <td>13,36</td>
+                              <td>800</td>
+                              <td>750</td>
+                              <td>1200</td>
+                              <td>1150</td>
+                              <td>2024-11-01</td>
+                            </tr>
+                            <tr>
+                              <td>2</td>
+                              <td>1KLJ</td>
+                              <td>II</td>
+                              <td>CV. Sejahtera</td>
+                              <td>45,50</td>
+                              <td>30,00</td>
+                              <td>28,50</td>
+                              <td>30,00</td>
+                              <td>28,50</td>
+                              <td>45,50</td>
+                              <td>45,50</td>
+                              <td>2500</td>
+                              <td>2400</td>
+                              <td>45,50</td>
+                              <td>25,00</td>
+                              <td>45,50</td>
+                              <td>20,00</td>
+                              <td>45,50</td>
+                              <td>12,00</td>
+                              <td>45,50</td>
+                              <td>10,00</td>
+                              <td>600</td>
+                              <td>580</td>
+                              <td>1000</td>
+                              <td>950</td>
+                              <td>2024-11-05</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Form upload file Excel -->
+                <div class="form-group">
+                  <label>1. Pilih Tanggal Data</label>
+                  <input type="date" v-model="excelImportDate" required />
+                  <small class="form-help">Pilih tanggal untuk data yang akan diimpor. Maksimal adalah hari kemarin.</small>
+                </div>
+                
+                <div class="form-group">
+                  <label>2. Upload File Excel</label>
+                  <div class="file-upload-area" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleFileDrop">
+                    <input 
+                      type="file" 
+                      ref="fileInput" 
+                      @change="handleFileChange" 
+                      accept=".xlsx, .xls" 
+                      style="display: none"
+                    />
+                    <div v-if="!excelFile" class="file-upload-placeholder">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                      </svg>
+                      <p>Klik untuk memilih file atau drag and drop di sini</p>
+                      <p class="file-format-info">Format yang didukung: .xlsx, .xls</p>
+                    </div>
+                    <div v-else class="file-selected">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                      </svg>
+                      <p>{{ excelFile.name }}</p>
+                      <button @click.stop="removeFile" class="btn btn-sm btn-secondary">Hapus File</button>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Preview table -->
+                <div v-if="excelFile" class="form-group">
+                  <label>3. Preview Data</label>
+                  <div class="excel-preview-container">
+                    <div v-if="isProcessingExcel" class="loading-container">
+                      <div class="spinner"></div>
+                      <p>Memproses file Excel...</p>
+                    </div>
+                    <div v-else-if="excelData.length > 0" class="excel-preview-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>No.Urut</th>
+                            <th>No.Kode</th>
+                            <th>Kebun</th>
+                            <th>Afdeling</th>
+                            <th>Nama Vendor</th>
+                            <th>Luas (Ha)</th>
+                            <th>Progress (%)</th>
+                            <th>Tanggal SPPBJ</th>
+                            <th>Durasi Kerja</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(item, index) in excelData" :key="index" :class="{ 'error-row': item.error }">
+                            <td>{{ index + 1 }}</td>
+                            <td>{{ item.no }}</td>
+                            <td>{{ item.kebun }}</td>
+                            <td>{{ item.afdeling }}</td>
+                            <td>{{ item.namaVendor }}</td>
+                            <td>{{ formatNumber(item.luas) }}</td>
+                            <td>{{ formatNumber(item.progressOverall) }}</td>
+                            <td>{{ formatDate(item.tanggalSPPBJ) }}</td>
+                            <td>{{ calculateDurasiForDate(item.tanggalSPPBJ, excelImportDate) }}</td>
+                            <td>
+                              <span v-if="item.error" class="error-badge">{{ item.error }}</span>
+                              <span v-else class="success-badge">Valid</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div v-else class="no-data">
+                      <p>Tidak ada data yang dapat diproses dari file Excel.</p>
+                    </div>
+                  </div>
+                </div>
+                
+          <div class="modal-actions">
+            <button 
+              @click="handleSaveExcel" 
+              :disabled="isSavingExcel || !excelFile || excelData.length === 0 || hasInvalidData" 
+              class="btn btn-primary"
+            >
+              {{ isSavingExcel ? 'Menyimpan...' : 'Simpan Semua Data' }}
+            </button>
+            <button @click="closePreviousDateModal" class="btn btn-secondary">
+              Batal
+            </button>
           </div>
-          
-          <div class="example-section">
-            <h5>Contoh Data Excel:</h5>
-            <div class="example-table-container">
-              <table class="example-table">
-                <thead>
-                  <tr>
-                    <th class="col-header">A</th>
-                    <th class="col-header">B</th>
-                    <th class="col-header">C</th>
-                    <th class="col-header">D</th>
-                    <th class="col-header">E</th>
-                    <th class="col-header">F</th>
-                    <th class="col-header">G</th>
-                    <th class="col-header">H</th>
-                    <th class="col-header">I</th>
-                    <th class="col-header">J</th>
-                    <th class="col-header">K</th>
-                    <th class="col-header">L</th>
-                    <th class="col-header">M</th>
-                    <th class="col-header">N</th>
-                    <th class="col-header">O</th>
-                    <th class="col-header">P</th>
-                    <th class="col-header">Q</th>
-                    <th class="col-header">R</th>
-                    <th class="col-header">S</th>
-                    <th class="col-header">T</th>
-                    <th class="col-header">U</th>
-                    <th class="col-header">V</th>
-                    <th class="col-header">W</th>
-                    <th class="col-header">X</th>
-                    <th class="col-header">Y</th>
-                    <th class="col-header">Z</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>1</td>
-                    <td>1KLJ</td>
-                    <td>I</td>
-                    <td>PT. Maju Jaya</td>
-                    <td>56,73</td>
-                    <td>36,44</td>
-                    <td>36,44</td>
-                    <td>36,44</td>
-                    <td>36,44</td>
-                    <td>56,73</td>
-                    <td>56,73</td>
-                    <td>3318</td>
-                    <td>3275</td>
-                    <td>56,73</td>
-                    <td>31,00</td>
-                    <td>56,73</td>
-                    <td>26,86</td>
-                    <td>56,73</td>
-                    <td>14,00</td>
-                    <td>56,73</td>
-                    <td>13,36</td>
-                    <td>800</td>
-                    <td>750</td>
-                    <td>1200</td>
-                    <td>1150</td>
-                    <td>2024-11-01</td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td>1KLJ</td>
-                    <td>II</td>
-                    <td>CV. Sejahtera</td>
-                    <td>45,50</td>
-                    <td>30,00</td>
-                    <td>28,50</td>
-                    <td>30,00</td>
-                    <td>28,50</td>
-                    <td>45,50</td>
-                    <td>45,50</td>
-                    <td>2500</td>
-                    <td>2400</td>
-                    <td>45,50</td>
-                    <td>25,00</td>
-                    <td>45,50</td>
-                    <td>20,00</td>
-                    <td>45,50</td>
-                    <td>12,00</td>
-                    <td>45,50</td>
-                    <td>10,00</td>
-                    <td>600</td>
-                    <td>580</td>
-                    <td>1000</td>
-                    <td>950</td>
-                    <td>2024-11-05</td>
-                  </tr>
-                </tbody>
-              </table>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Form upload file Excel -->
-      <div class="form-group">
-        <label>1. Pilih Tanggal Data</label>
-        <input type="date" v-model="excelImportDate" :max="maxPreviousDate" required />
-        <small class="form-help">Pilih tanggal untuk data yang akan diimpor. Maksimal adalah hari kemarin.</small>
-      </div>
-      
-      <div class="form-group">
-        <label>2. Upload File Excel</label>
-        <div class="file-upload-area" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleFileDrop">
-          <input 
-            type="file" 
-            ref="fileInput" 
-            @change="handleFileChange" 
-            accept=".xlsx, .xls" 
-            style="display: none"
-          />
-          <div v-if="!excelFile" class="file-upload-placeholder">
-            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <p>Klik untuk memilih file atau drag and drop di sini</p>
-            <p class="file-format-info">Format yang didukung: .xlsx, .xls</p>
-          </div>
-          <div v-else class="file-selected">
-            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <p>{{ excelFile.name }}</p>
-            <button @click.stop="removeFile" class="btn btn-sm btn-secondary">Hapus File</button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Preview table -->
-      <div v-if="excelFile" class="form-group">
-        <label>3. Preview Data</label>
-        <div class="excel-preview-container">
-          <div v-if="isProcessingExcel" class="loading-container">
-            <div class="spinner"></div>
-            <p>Memproses file Excel...</p>
-          </div>
-          <div v-else-if="excelData.length > 0" class="excel-preview-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>No.Urut</th>
-                  <th>No.Kode</th>
-                  <th>Kebun</th>
-                  <th>Afdeling</th>
-                  <th>Nama Vendor</th>
-                  <th>Luas (Ha)</th>
-                  <th>Progress (%)</th>
-                  <th>Tanggal SPPBJ</th>
-                  <th>Durasi Kerja</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(item, index) in excelData" :key="index" :class="{ 'error-row': item.error }">
-                  <td>{{ index + 1 }}</td>
-                  <td>{{ item.no }}</td>
-                  <td>{{ item.kebun }}</td>
-                  <td>{{ item.afdeling }}</td>
-                  <td>{{ item.namaVendor }}</td>
-                  <td>{{ formatNumber(item.luas) }}</td>
-                  <td>{{ formatNumber(item.progressOverall) }}</td>
-                  <td>{{ formatDate(item.tanggalSPPBJ) }}</td>
-                  <td>{{ calculateDurasiForDate(item.tanggalSPPBJ, excelImportDate) }}</td>
-                  <td>
-                    <span v-if="item.error" class="error-badge">{{ item.error }}</span>
-                    <span v-else class="success-badge">Valid</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-else class="no-data">
-            <p>Tidak ada data yang dapat diproses dari file Excel.</p>
-          </div>
-        </div>
-      </div>
-      
-<div class="modal-actions">
-  <button 
-    @click="handleSaveExcel" 
-    :disabled="isSavingExcel || !excelFile || excelData.length === 0 || hasInvalidData" 
-    class="btn btn-primary"
-  >
-    {{ isSavingExcel ? 'Menyimpan...' : 'Simpan Semua Data' }}
-  </button>
-  <button @click="closePreviousDateModal" class="btn btn-secondary">
-    Batal
-  </button>
-</div>
-    </div>
-  </div>
   
           </div>
         </div>
@@ -980,7 +1036,8 @@ export default {
         kebun: '',
         noUrut: '',
         vendor: '',
-        afdeling: ''
+        afdeling: '',
+        sortBy: 'date-desc' // Tambahkan opsi pengurutan default
       },
       
       // TAMBAHKAN PROPERTIES UNTUK EXCEL IMPORT
@@ -1089,58 +1146,83 @@ export default {
       return [...new Set(kebuns)].sort();
     },
         
-    // Computed property untuk memfilter data berdasarkan kebun yang dipilih
-    filteredDataList() {
-      if (!this.dataList || this.dataList.length === 0) return [];
-      
-      let filtered = [...this.dataList];
-      
-      // Filter berdasarkan kebun
-      if (this.filters.kebun) {
-        filtered = filtered.filter(item => item.kebun === this.filters.kebun);
-      }
-      
-      // Filter berdasarkan tanggal
-      if (this.filters.dateType === 'today') {
-        const today = new Date().toISOString().split('T')[0];
-        filtered = filtered.filter(item => {
-          const itemDate = this.formatDateForFilter(item.tanggal);
-          return itemDate === today;
-        });
-      } else if (this.filters.dateType === 'range' && this.filters.startDate && this.filters.endDate) {
-        filtered = filtered.filter(item => {
-          const itemDate = this.formatDateForFilter(item.tanggal);
-          return itemDate >= this.filters.startDate && itemDate <= this.filters.endDate;
-        });
-      } else if (this.filters.dateType === 'custom' && this.filters.customDate) {
-        filtered = filtered.filter(item => {
-          const itemDate = this.formatDateForFilter(item.tanggal);
-          return itemDate === this.filters.customDate;
-        });
-      }
-      
-      // Filter berdasarkan no urut
-      if (this.filters.noUrut) {
-        filtered = filtered.filter(item => item.no === this.filters.noUrut);
-      }
-      
-      // Filter berdasarkan vendor
-      if (this.filters.vendor) {
-        filtered = filtered.filter(item => item.namaVendor === this.filters.vendor);
-      }
-      
-      // Filter berdasarkan afdeling
-      if (this.filters.afdeling) {
-        filtered = filtered.filter(item => item.afdeling === this.filters.afdeling);
-      }
-      
-      return filtered.sort((a, b) => {
-        // Urutkan berdasarkan tanggal descending
-        const dateA = this.formatDateForFilter(a.tanggal);
-        const dateB = this.formatDateForFilter(b.tanggal);
-        return dateB.localeCompare(dateA);
+ // Perbarui computed property filteredDataList
+  filteredDataList() {
+    if (!this.dataList || this.dataList.length === 0) return [];
+    
+    let filtered = [...this.dataList];
+    
+    // Filter berdasarkan kebun
+    if (this.filters.kebun) {
+      filtered = filtered.filter(item => item.kebun === this.filters.kebun);
+    }
+    
+    // Filter berdasarkan tanggal (diperbarui)
+    if (this.filters.dateType === 'today') {
+      const today = new Date().toISOString().split('T')[0];
+      filtered = filtered.filter(item => {
+        const itemDate = this.formatDateForFilter(item.tanggal);
+        return itemDate === today;
       });
-    },
+    } else if (this.filters.dateType === 'yesterday') {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      filtered = filtered.filter(item => {
+        const itemDate = this.formatDateForFilter(item.tanggal);
+        return itemDate === yesterdayStr;
+      });
+    } else if (this.filters.dateType === 'week') {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoStr = weekAgo.toISOString().split('T')[0];
+      filtered = filtered.filter(item => {
+        const itemDate = this.formatDateForFilter(item.tanggal);
+        return itemDate >= weekAgoStr;
+      });
+    } else if (this.filters.dateType === 'month') {
+      const monthAgo = new Date();
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      const monthAgoStr = monthAgo.toISOString().split('T')[0];
+      filtered = filtered.filter(item => {
+        const itemDate = this.formatDateForFilter(item.tanggal);
+        return itemDate >= monthAgoStr;
+      });
+    } else if (this.filters.dateType === 'range' && this.filters.startDate && this.filters.endDate) {
+      filtered = filtered.filter(item => {
+        const itemDate = this.formatDateForFilter(item.tanggal);
+        return itemDate >= this.filters.startDate && itemDate <= this.filters.endDate;
+      });
+    }
+    
+    // Filter berdasarkan no urut
+    if (this.filters.noUrut) {
+      filtered = filtered.filter(item => item.no === this.filters.noUrut);
+    }
+    
+    // Filter berdasarkan vendor
+    if (this.filters.vendor) {
+      filtered = filtered.filter(item => item.namaVendor === this.filters.vendor);
+    }
+    
+    // Filter berdasarkan afdeling
+    if (this.filters.afdeling) {
+      filtered = filtered.filter(item => item.afdeling === this.filters.afdeling);
+    }
+    
+    // Urutkan data berdasarkan opsi yang dipilih
+    return this.sortData(filtered, this.filters.sortBy);
+  },
+
+    // Tambahkan method untuk reset input tanggal
+  resetDateInputs() {
+    // Reset input tanggal saat mengganti tipe filter
+    if (this.filters.dateType !== 'range') {
+      this.filters.startDate = '';
+      this.filters.endDate = '';
+    }
+  },
+
     // TAMBAHKAN COMPUTED PROPERTIES UNTUK OPSI FILTER
     uniqueNoUrutOptions() {
       const nos = this.dataList.map(item => item.no).filter(Boolean);
@@ -1160,6 +1242,41 @@ export default {
     }
   },
   methods: {
+    // Tambahkan metode ini di dalam methods
+formatDateTime(timestamp) {
+  if (!timestamp) return '';
+  
+  let date;
+  
+  // Jika adalah objek timestamp Firestore
+  if (timestamp && typeof timestamp === 'object' && timestamp._seconds !== undefined) {
+    date = new Date(timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000);
+  } 
+  // Jika adalah objek Date
+  else if (timestamp instanceof Date) {
+    date = timestamp;
+  } 
+  // Jika adalah string
+  else if (typeof timestamp === 'string') {
+    date = new Date(timestamp);
+  } 
+  // Default
+  else {
+    return timestamp.toString();
+  }
+  
+  // Format tanggal: "18 November 2025, 07:00"
+  if (date && !isNaN(date.getTime())) {
+    const options = { 
+      day: 'numeric', 
+      month: 'numeric', 
+      year: 'numeric',
+    };
+    return date.toLocaleDateString('id-ID', options);
+  }
+  
+  return timestamp.toString();
+},
     // Tambahkan metode ini di dalam methods
     resetNoUrutSelection() {
       this.selectedPreviousDataId = '';
@@ -1182,6 +1299,53 @@ export default {
       return date.toISOString().split('T')[0];
     },
     
+    // Metode untuk mengurutkan data
+    sortData(data, sortBy) {
+      const sortedData = [...data];
+      
+      switch (sortBy) {
+        case 'date-desc':
+          // Urutkan berdasarkan tanggal descending (terbaru)
+          return sortedData.sort((a, b) => {
+            const dateA = this.formatDateForFilter(a.tanggal);
+            const dateB = this.formatDateForFilter(b.tanggal);
+            return dateB.localeCompare(dateA);
+          });
+          
+        case 'date-asc':
+          // Urutkan berdasarkan tanggal ascending (terlama)
+          return sortedData.sort((a, b) => {
+            const dateA = this.formatDateForFilter(a.tanggal);
+            const dateB = this.formatDateForFilter(b.tanggal);
+            return dateA.localeCompare(dateB);
+          });
+          
+        case 'no-asc':
+          // Urutkan berdasarkan no urut ascending (terkecil)
+          return sortedData.sort((a, b) => a.no - b.no);
+          
+        case 'no-desc':
+          // Urutkan berdasarkan no urut descending (terbesar)
+          return sortedData.sort((a, b) => b.no - a.no);
+          
+        case 'progress-desc':
+          // Urutkan berdasarkan progress descending (tertinggi)
+          return sortedData.sort((a, b) => b.progressOverall - a.progressOverall);
+          
+        case 'progress-asc':
+          // Urutkan berdasarkan progress ascending (terendah)
+          return sortedData.sort((a, b) => a.progressOverall - b.progressOverall);
+          
+        default:
+          // Default: urutkan berdasarkan tanggal descending
+          return sortedData.sort((a, b) => {
+            const dateA = this.formatDateForFilter(a.tanggal);
+            const dateB = this.formatDateForFilter(b.tanggal);
+            return dateB.localeCompare(dateA);
+          });
+      }
+    },
+    
     // TAMBAHKAN METHODS UNTUK FILTER
     toggleFilter() {
       this.showFilter = !this.showFilter;
@@ -1199,27 +1363,28 @@ export default {
       }).showToast();
     },
 
-    resetFilters() {
-      // Kembalikan filter ke nilai awal
-      this.filters = {
-        dateType: 'all',
-        startDate: '',
-        endDate: '',
-        customDate: '',
-        kebun: '',
-        noUrut: '',
-        vendor: '',
-        afdeling: ''
-      };
-      
-      Toastify({
-        text: "Filter berhasil direset",
-        duration: 3000,
-        gravity: "top",
-        position: "right",
-        style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
-      }).showToast();
-    },
+  resetFilters() {
+    // Kembalikan filter ke nilai awal
+    this.filters = {
+      dateType: 'all',
+      startDate: '',
+      endDate: '',
+      kebun: '',
+      noUrut: '',
+      vendor: '',
+      afdeling: '',
+      sortBy: 'date-desc' // Reset ke default
+    };
+    
+    Toastify({
+      text: "Filter berhasil direset",
+      duration: 3000,
+      gravity: "top",
+      position: "right",
+      style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
+    }).showToast();
+  },
+  
     
     logout() {
       localStorage.removeItem('user');
@@ -1683,7 +1848,7 @@ export default {
     
     resetForm() {
       this.formData = {
-        no: this.formData.no, // Keep the same sequence number
+        no: this.formData.no, // Keep same sequence number
         afdeling: '',
         namaVendor: '',
         luas: 0,
@@ -2623,8 +2788,8 @@ button {
 
 .loading-container {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: column ;
+    align-items: center;
   justify-content: center;
   padding: 40px;
   color: #6b7280;
@@ -2869,7 +3034,6 @@ button {
   font-weight: 600;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
-
 /* Style untuk bagian filter */
 .section-header {
   display: flex;
@@ -2909,33 +3073,54 @@ button {
   border-radius: 8px;
   margin-bottom: 20px;
   border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .filter-controls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
   margin-bottom: 20px;
 }
 
+/* Perbaruan style untuk filter */
 .filter-group {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .filter-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
   margin-bottom: 8px;
   color: #374151;
+  font-size: 14px;
+}
+
+.filter-group label svg {
+  flex-shrink: 0;
+  opacity: 0.7;
 }
 
 .filter-group select,
 .filter-group input[type="date"] {
   width: 100%;
-  padding: 10px;
+  padding: 10px 12px;
   border: 1px solid #d1d5db;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 14px;
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.filter-group select:focus,
+.filter-group input[type="date"]:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .date-options {
@@ -2951,20 +3136,101 @@ button {
   font-weight: normal;
 }
 
+.date-range-group {
+  grid-column: span 2;
+}
+
 .date-range-inputs {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+.date-range-inputs input {
+  flex: 1;
+}
+
 .date-range-inputs span {
   color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .filter-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.filter-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Responsive untuk filter */
+@media (max-width: 768px) {
+  .filter-controls {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .date-range-group {
+    grid-column: span 1;
+  }
+  
+  .date-range-inputs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .date-range-inputs span {
+    text-align: center;
+  }
+  
+  .filter-actions {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-group label {
+    font-size: 13px;
+  }
+  
+  .filter-group select,
+  .filter-group input[type="date"] {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .date-options {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .date-options label {
+    justify-content: flex-start;
+  }
+
+  .date-range-inputs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .date-range-inputs span {
+    text-align: center;
+  }
+
+  .filter-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 /* Style untuk tab dan Excel import */
@@ -3082,5 +3348,276 @@ button {
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+/* Style untuk dokumentasi Excel */
+.excel-documentation {
+  margin-bottom: 30px;
+}
+
+.documentation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.documentation-header h4 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.documentation-content p {
+  margin-bottom: 15px;
+  color: #374151;
+}
+
+.documentation-table-container {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.documentation-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.documentation-table th,
+.documentation-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid #e5e7eb;
+}
+
+.documentation-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.col-letter {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  text-align: center;
+  width: 60px;
+}
+
+.example-section h5 {
+  margin: 20px 0 10px 0;
+  color: #1f2937;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.example-table-container {
+  overflow-x: auto;
+}
+
+.example-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.example-table th,
+.example-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border: 1px solid #e5e7eb;
+}
+
+.example-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.col-header {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  text-align: center;
+  min-width: 50px;
+}
+
+.conflict-list {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+}
+
+.conflict-list h4 {
+  margin: 0 0 10px 0;
+  color: #991b1b;
+  font-size: 1rem;
+}
+
+.conflict-list ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.conflict-list li {
+  margin-bottom: 5px;
+  color: #7f1d1d;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .data-entry-container {
+    padding: 10px;
+  }
+  
+  header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .form-grid-main,
+  .form-grid-secondary {
+    grid-template-columns: 1fr;
+  }
+  
+  .progress-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .data-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-controls {
+    grid-template-columns: 1fr;
+  }
+  
+  .date-options {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .date-range-inputs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .modal-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .modal-form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .floating-btn {
+    bottom: 10px;
+    right: 10px;
+    padding: 12px 20px;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .card-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .card-item {
+    width: 100%;
+  }
+  
+  .tab-buttons {
+    flex-direction: column;
+  }
+  
+  .documentation-table-container,
+  .example-table-container {
+    font-size: 0.75rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.data-card {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Focus states for accessibility */
+button:focus,
+input:focus,
+select:focus {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Print styles */
+@media print {
+  .floating-btn,
+  .filter-toggle-btn,
+  .card-actions,
+  .modal-overlay {
+    display: none !important;
+  }
+  
+  .data-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+  }
+  
+  .data-card {
+    break-inside: avoid;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .data-card {
+    border: 2px solid #000;
+  }
+  
+  .card-header {
+    background-color: #000;
+    color: #fff;
+  }
+  
+  .btn {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 </style>

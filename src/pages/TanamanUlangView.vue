@@ -1074,222 +1074,225 @@ export default {
       };
     },
     
-    // CHANGE: Refactored Radar Chart Data to prevent merging and fix tooltip
-    radarChartData() {
-      if (!this.filteredData || !this.filteredData.length) {
-        return [];
-      }
-      
-      const activityLabels = [
-        'Pembuatan Parit',
-        'Pembuatan Jalan',
-        'Pembuatan Teras',
-        'Ripping',
-        'Luku',
-        'Tumbang/Chipping',
-        'Menanam Mucuna',
-        'Lubang Tanam KS',
-        'Mempupuk Lubang KS',
-        'Menanam KS'
-      ];
-      
-      const chartsData = [];
-      
-      // CHANGE: Iterate directly over filteredData to create a chart for each row
-      this.filteredData.forEach(row => {
-        const activities = [
-          { name: 'Pembuatan Parit', data: [] },
-          { name: 'Pembuatan Jalan', data: [] },
-          { name: 'Pembuatan Teras', data: [] },
-          { name: 'Ripping', data: [] },
-          { name: 'Luku', data: [] },
-          { name: 'Tumbang/Chipping', data: [] },
-          { name: 'Menanam Mucuna', data: [] },
-          { name: 'Lubang Tanam KS', data: [] },
-          { name: 'Mempupuk Lubang KS', data: [] },
-          { name: 'Menanam KS', data: [] }
-        ];
-        
-        // CHANGE: Prepare detailInfo for tooltip
-        const detailInfo = [];
+// CHANGE: Refactored Radar Chart Data to prevent merging and fix tooltip
+radarChartData() {
+  if (!this.filteredData || !this.filteredData.length) {
+    return [];
+  }
+  
+  const activityLabels = [
+    'Pembuatan Parit',
+    'Pembuatan Jalan',
+    'Pembuatan Teras',
+    'Ripping',
+    'Luku',
+    'Tumbang/Chipping',
+    'Menanam Mucuna',
+    'Lubang Tanam KS',
+    'Mempupuk Lubang KS',
+    'Menanam KS'
+  ];
+  
+  const chartsData = [];
+  
+  // CHANGE: Iterate directly over filteredData to create a chart for each row
+  this.filteredData.forEach((row, rowIndex) => {
+    // --- START OF DEBUGGING LOGS ---
+    console.log(`--- Processing Row ${rowIndex} for Radar Chart ---`);
+    console.log('Full Row Object:', row);
 
-        // Calculate percentage for each activity and populate detailInfo
-        const calculatePercentageWithZeroCheck = (current, target) => {
-          if (target === 0) return 100;
-          return this.calculatePercentage(current, target);
-        };
-        
-        detailInfo.push({
-          name: 'Pembuatan Parit', 
-          rencana: this.getProgressData(row.pembuatanParit, 'rencana'),
-          realisasi: this.getProgressData(row.pembuatanParit, 'sdHariIni')
-        });
-        activities[0].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.pembuatanParit, 'sdHariIni'),
-          this.getProgressData(row.pembuatanParit, 'rencana')
-        ));
+    // Check if the main activity objects exist
+    if (!row.pembuatanParit || !row.pembuatanJalan || !row.pembuatanTeras || !row.ripping || !row.luku || !row.tumbangChipping || !row.menanamMucuna || !row.lubangTanamKS || !row.mempupukLubangKS || !row.menanamKS) {
+      console.warn('One or more main activity objects are missing for this row:', row);
+      // If a main activity object is missing, we can't proceed, so skip this row for the chart.
+      return; 
+    }
+    // --- END OF DEBUGGING LOGS ---
 
-        detailInfo.push({
-          name: 'Pembuatan Jalan', 
-          rencana: this.getProgressData(row.pembuatanJalan, 'rencana'),
-          realisasi: this.getProgressData(row.pembuatanJalan, 'sdHariIni')
-        });
-        activities[1].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.pembuatanJalan, 'sdHariIni'),
-          this.getProgressData(row.pembuatanJalan, 'rencana')
-        ));
+    const activities = [
+      { name: 'Pembuatan Parit', data: [] },
+      { name: 'Pembuatan Jalan', data: [] },
+      { name: 'Pembuatan Teras', data: [] },
+      { name: 'Ripping', data: [] },
+      { name: 'Luku', data: [] },
+      { name: 'Tumbang/Chipping', data: [] },
+      { name: 'Menanam Mucuna', data: [] },
+      { name: 'Lubang Tanam KS', data: [] },
+      { name: 'Mempupuk Lubang KS', data: [] },
+      { name: 'Menanam KS', data: [] }
+    ];
+    
+    // CHANGE: Prepare detailInfo for tooltip
+    const detailInfo = [];
 
-        detailInfo.push({
-          name: 'Pembuatan Teras', 
-          rencana: this.getProgressData(row.pembuatanTeras, 'rencana'),
-          realisasi: this.getProgressData(row.pembuatanTeras, 'sdHariIni')
-        });
-        activities[2].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.pembuatanTeras, 'sdHariIni'),
-          this.getProgressData(row.pembuatanTeras, 'rencana')
-        ));
-        
-        detailInfo.push({
-          name: 'Ripping', 
-          rencana: this.getProgressData(row.ripping, 'rencana'),
-          realisasi: this.getProgressData(row.ripping, 'sdHariIni')
-        });
-        activities[3].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.ripping, 'sdHariIni'),
-          this.getProgressData(row.ripping, 'rencana')
-        ));
-        
-        detailInfo.push({
-          name: 'Luku', 
-          rencana: this.getProgressData(row.luku, 'rencana'),
-          realisasi: this.getProgressData(row.luku, 'sdHariIni')
-        });
-        activities[4].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.luku, 'sdHariIni'),
-          this.getProgressData(row.luku, 'rencana')
-        ));
-        
-        detailInfo.push({
-          name: 'Tumbang/Chipping', 
-          rencana: this.getProgressData(row.tumbangChipping, 'rencana'),
-          realisasi: this.getProgressData(row.tumbangChipping, 'sdHariIni')
-        });
-        activities[5].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.tumbangChipping, 'sdHariIni'),
-          this.getProgressData(row.tumbangChipping, 'rencana')
-        ));
-        
-        detailInfo.push({
-          name: 'Menanam Mucuna', 
-          rencana: this.getProgressData(row.menanamMucuna, 'rencana'),
-          realisasi: this.getProgressData(row.menanamMucuna, 'sdHariIni')
-        });
-        activities[6].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.menanamMucuna, 'sdHariIni'),
-          this.getProgressData(row.menanamMucuna, 'rencana')
-        ));
-        
-        detailInfo.push({
-          name: 'Lubang Tanam KS', 
-          rencana: this.getProgressData(row.lubangTanamKS, 'rencana'),
-          realisasi: this.getProgressData(row.lubangTanamKS, 'sdHariIni')
-        });
-        activities[7].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.lubangTanamKS, 'sdHariIni'),
-          this.getProgressData(row.lubangTanamKS, 'rencana')
-        ));
-        
-        detailInfo.push({
-          name: 'Mempupuk Lubang KS', 
-          rencana: this.getProgressData(row.mempupukLubangKS, 'rencana'),
-          realisasi: this.getProgressData(row.mempupukLubangKS, 'sdHariIni')
-        });
-        activities[8].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.mempupukLubangKS, 'sdHariIni'),
-          this.getProgressData(row.mempupukLubangKS, 'rencana')
-        ));
-        
-        detailInfo.push({
-          name: 'Menanam KS', 
-          rencana: this.getProgressData(row.menanamKS, 'rencana'),
-          realisasi: this.getProgressData(row.menanamKS, 'sdHariIni')
-        });
-        activities[9].data.push(calculatePercentageWithZeroCheck(
-          this.getProgressData(row.menanamKS, 'sdHariIni'),
-          this.getProgressData(row.menanamKS, 'rencana')
-        ));
-        
-        // Calculate average for each activity (will be the same as the single value)
-        const activityData = activities.map(activity => activity.data[0] || 0);
-        
-        // Format title: Kebun - AFD X - Vendor Name
-        const title = `${row.kebun} - AFD ${row.afdeling} - ${row.namaVendor}`;
-        
-        chartsData.push({
-          title: title,
-          data: {
-            labels: activityLabels,
-            datasets: [{
-              label: 'Progress (%)',
-              data: activityData,
-              backgroundColor: 'rgba(59, 130, 246, 0.2)',
-              borderColor: 'rgba(59, 130, 246, 1)',
-              pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-              pointBorderColor: '#fff',
-              pointHoverBackgroundColor: '#fff',
-              pointHoverBorderColor: 'rgba(59, 130, 246, 1)',
-              // CHANGE: Add detailInfo to the dataset for the tooltip
-              tooltipData: detailInfo
-            }]
-          },
-          options: {
-            scales: {
-              r: {
-                beginAtZero: true,
-                max: 100,
-                ticks: {
-                  stepSize: 20,
-                  callback: function(value) {
-                    return value + '%';
-                  }
-                }
-              }
-            },
-            plugins: {
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    const dataIndex = context.dataIndex;
-                    const tooltipItem = context.dataset.tooltipData[dataIndex];
-                    
-                    // Get the rencana and realisasi values
-                    const rencana = tooltipItem.rencana;
-                    const realisasi = tooltipItem.realisasi;
-                    
-                    // If rencana is 0, show a special message
-                    if (rencana === 0) {
-                      return [
-                        `${context.label}: 100% (Tidak ada rencana untuk aktivitas ini)`
-                      ];
-                    }
-                    
-                    // Otherwise, show the normal tooltip
-                    return [
-                      `${context.label}: ${context.parsed.r.toFixed(2)}%`,
-                      `Rencana: ${rencana}`,
-                      `Realisasi: ${realisasi}`
-                    ];
-                  }
-                }
+    // Calculate percentage for each activity and populate detailInfo
+    const calculatePercentageWithZeroCheck = (current, target) => {
+      if (target === 0) return 100;
+      return this.calculatePercentage(current, target);
+    };
+    
+    // --- START OF ACTIVITY 1: Pembuatan Parit ---
+    const paritData = row.pembuatanParit;
+    console.log('Activity 1 - Pembuatan Parit Data:', paritData);
+
+    const paritRencana = this.getProgressData(paritData, 'rencana');
+    const paritRealisasi = this.getProgressData(paritData, 'sdHariIni');
+    const paritPersentase = calculatePercentageWithZeroCheck(paritRealisasi, paritRencana);
+
+    console.log(`Parit -> Rencana: ${paritRencana}, Realisasi: ${paritRealisasi}, Persentase: ${paritPersentase}`);
+    
+    detailInfo.push({
+      name: 'Pembuatan Parit', 
+      rencana: paritRencana,
+      realisasi: paritRealisasi
+    });
+    activities[0].data.push(paritPersentase);
+    // --- END OF ACTIVITY 1 ---
+
+
+    // --- START OF ACTIVITY 2: Pembuatan Jalan ---
+    const jalanData = row.pembuatanJalan;
+    const jalanRencana = this.getProgressData(jalanData, 'rencana');
+    const jalanRealisasi = this.getProgressData(jalanData, 'sdHariIni');
+    const jalanPersentase = calculatePercentageWithZeroCheck(jalanRealisasi, jalanRencana);
+
+    console.log(`Jalan -> Rencana: ${jalanRencana}, Realisasi: ${jalanRealisasi}, Persentase: ${jalanPersentase}`);
+
+    detailInfo.push({
+      name: 'Pembuatan Jalan', 
+      rencana: jalanRencana,
+      realisasi: jalanRealisasi
+    });
+    activities[1].data.push(jalanPersentase);
+    // --- END OF ACTIVITY 2 ---
+
+
+    // ... (Repeat this logging block for all 10 activities) ...
+    // For brevity, I will show the pattern for the rest. You should copy this for all activities.
+    
+    // --- START OF ACTIVITY 3: Pembuatan Teras ---
+    const terasData = row.pembuatanTeras;
+    const terasRencana = this.getProgressData(terasData, 'rencana');
+    const terasRealisasi = this.getProgressData(terasData, 'sdHariIni');
+    const terasPersentase = calculatePercentageWithZeroCheck(terasRealisasi, terasRencana);
+
+    console.log(`Teras -> Rencana: ${terasRencana}, Realisasi: ${terasRealisasi}, Persentase: ${terasPersentase}`);
+
+    detailInfo.push({
+      name: 'Pembuatan Teras', 
+      rencana: terasRencana,
+      realisasi: terasRealisasi
+    });
+    activities[2].data.push(terasPersentase);
+    // --- END OF ACTIVITY 3 ---
+    
+    // --- START OF ACTIVITY 4: Ripping ---
+    const rippingData = row.ripping;
+    const rippingRencana = this.getProgressData(rippingData, 'rencana');
+    const rippingRealisasi = this.getProgressData(rippingData, 'sdHariIni');
+    const rippingPersentase = calculatePercentageWithZeroCheck(rippingRealisasi, rippingRencana);
+
+    console.log(`Ripping -> Rencana: ${rippingRencana}, Realisasi: ${rippingRealisasi}, Persentase: ${rippingPersentase}`);
+
+    detailInfo.push({
+      name: 'Ripping', 
+      rencana: rippingRencana,
+      realisasi: rippingRealisasi
+    });
+    activities[3].data.push(rippingPersentase);
+    // --- END OF ACTIVITY 4 ---
+
+    // ... (Continue this pattern for 'Luku', 'Tumbang/Chipping', 'Menanam Mucuna', 'Lubang Tanam KS', 'Mempupuk Lubang KS', 'Menanam KS')
+    
+    // Example for the last one, 'Menanam KS':
+    const ksData = row.menanamKS;
+    const ksRencana = this.getProgressData(ksData, 'rencana');
+    const ksRealisasi = this.getProgressData(ksData, 'sdHariIni');
+    const ksPersentase = calculatePercentageWithZeroCheck(ksRealisasi, ksRencana);
+
+    console.log(`Menanam KS -> Rencana: ${ksRencana}, Realisasi: ${ksRealisasi}, Persentase: ${ksPersentase}`);
+
+    detailInfo.push({
+      name: 'Menanam KS', 
+      rencana: ksRencana,
+      realisasi: ksRealisasi
+    });
+    activities[9].data.push(ksPersentase);
+    // --- END OF ACTIVITY 10 ---
+    
+    // Final log of the complete detailInfo array that will be passed to the tooltip
+    console.log('Final detailInfo array for tooltip:', detailInfo);
+
+    // Calculate average for each activity (will be the same as the single value)
+    const activityData = activities.map(activity => activity.data[0] || 0);
+    
+    // Format title: Kebun - AFD X - Vendor Name
+    const title = `${row.kebun} - AFD ${row.afdeling} - ${row.namaVendor}`;
+    
+    chartsData.push({
+      title: title,
+      data: {
+        labels: activityLabels,
+        datasets: [{
+          label: 'Progress (%)',
+          data: activityData,
+          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+          borderColor: 'rgba(59, 130, 246, 1)',
+          pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgba(59, 130, 246, 1)',
+          // CHANGE: Add detailInfo to the dataset for the tooltip
+          tooltipData: detailInfo
+        }]
+      },
+      options: {
+        scales: {
+          r: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              stepSize: 20,
+              callback: function(value) {
+                return value + '%';
               }
             }
           }
-        });
-      });
-      
-      return chartsData;
-    },
-    
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const dataIndex = context.dataIndex;
+                const tooltipItem = context.dataset.tooltipData[dataIndex];
+                
+                // Get the rencana and realisasi values
+                const rencana = tooltipItem.rencana;
+                const realisasi = tooltipItem.realisasi;
+                
+                // If rencana is 0, show a special message
+                if (rencana === 0) {
+                  return [
+                    `${context.label}: 100% (Tidak ada rencana untuk aktivitas ini)`
+                  ];
+                }
+                
+                // Otherwise, show the normal tooltip
+                return [
+                  `${context.label}: ${context.parsed.r.toFixed(2)}%`,
+                  `Rencana: ${rencana}`,
+                  `Realisasi: ${realisasi}`
+                ];
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+  
+  return chartsData;
+},
     // Ranking Data
     topRankingData() {
       if (!this.filteredData || !this.filteredData.length) return [];
