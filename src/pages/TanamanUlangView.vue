@@ -191,7 +191,7 @@
               <div class="regression-details">
                 <h4 class="details-title">Detail Perubahan per Kegiatan</h4>
                 <div class="activity-regression">
-                  <!-- FIX: Using optional chaining and nullish coalescing for the v-for loop -->
+                  <!-- FIX: Using optional chaining and nullish coalescing for v-for loop -->
                   <div v-for="(activity, index) in (regressionData?.activities || [])" :key="index" class="activity-item">
                     <div class="activity-name">{{ activity.name }}</div>
                     <div class="activity-progress">
@@ -288,17 +288,21 @@
             :title="needleChartTitle"
             :legend="needleChartLegend"
             :data="pieWithNeedleChartData"
-            :average-progress="filteredAvgProgress"
+            :average-progress="parseFloat(filteredAvgProgress) || 0"
           />
         </div>
       </div>
-      <!-- Second Row: Multiple Radar Charts -->
-      <div class="mb-8">
-        <RadarChart 
-          title="Progress TU Per Objek Kerja" 
-          :charts="radarChartData" 
-        />
-      </div>
+<!-- Second Row: Multiple Radar Charts -->
+<div class="mb-8">
+  <div v-if="radarChartData.length === 0" class="text-center py-8">
+    <p class="text-gray-500">Tidak ada data radar chart yang tersedia. Pastikan semua data aktivitas telah diisi dengan benar.</p>
+  </div>
+  <RadarChart 
+    v-else
+    title="Progress TU Per Objek Kerja" 
+    :charts="radarChartData" 
+  />
+</div>
 
       <!-- Data Grid -->
       <div class="data-grid">
@@ -364,7 +368,7 @@
                 <th class="w-64">Tumbang/Chipping</th>
                 <th class="w-64">Menanam Mucuna</th>
                 <th class="w-64">Lubang Tanam KS</th>
-                <th class="w-64">Mempupuk Lubang KS</th>
+                <th class="w-64">memupuk Lubang KS</th>
                 <th class="w-64">Menanam KS</th>
                 <th class="w-64">Progress overall</th>
                 <th class="w-40">Tanggal SPPBJ</th>
@@ -494,12 +498,12 @@
                     </td>
                     <td class="data-grid-cell">
                       <ProgressItem
-                        title="Mempupuk Lubang KS"
+                        title="memupuk Lubang KS"
                         unit="Ha"
-                        :rencana="getProgressData(row.mempupukLubangKS, 'rencana')"
-                        :hari-ini="getProgressData(row.mempupukLubangKS, 'hariIni')"
-                        :sd-hari-ini="getProgressData(row.mempupukLubangKS, 'sdHariIni')"
-                        :persentase="calculatePercentage(getProgressData(row.mempupukLubangKS, 'sdHariIni'), getProgressData(row.mempupukLubangKS, 'rencana'))"
+                        :rencana="getProgressData(row.memupukLubangKS, 'rencana')"
+                        :hari-ini="getProgressData(row.memupukLubangKS, 'hariIni')"
+                        :sd-hari-ini="getProgressData(row.memupukLubangKS, 'sdHariIni')"
+                        :persentase="calculatePercentage(getProgressData(row.memupukLubangKS, 'sdHariIni'), getProgressData(row.memupukLubangKS, 'rencana'))"
                       />
                     </td>
                     <td class="data-grid-cell">
@@ -692,7 +696,7 @@ export default {
             row.kebun,
             row.namaVendor,
             row.afdeling,
-            row.luas.toString(),
+            row.luas?.toString() || '0',
             this.getProgressData(row.pembuatanParit, 'rencana').toString(),
             this.getProgressData(row.pembuatanParit, 'sdHariIni').toString(),
             this.getProgressData(row.pembuatanJalan, 'rencana').toString(),
@@ -709,8 +713,8 @@ export default {
             this.getProgressData(row.menanamMucuna, 'sdHariIni').toString(),
             this.getProgressData(row.lubangTanamKS, 'rencana').toString(),
             this.getProgressData(row.lubangTanamKS, 'sdHariIni').toString(),
-            this.getProgressData(row.mempupukLubangKS, 'rencana').toString(),
-            this.getProgressData(row.mempupukLubangKS, 'sdHariIni').toString(),
+            this.getProgressData(row.memupukLubangKS, 'rencana').toString(),
+            this.getProgressData(row.memupukLubangKS, 'sdHariIni').toString(),
             this.getProgressData(row.menanamKS, 'rencana').toString(),
             this.getProgressData(row.menanamKS, 'sdHariIni').toString(),
             row.progressOverall?.toString() || '0',
@@ -729,11 +733,23 @@ export default {
       return result;
     },
     
-    // Group data berdasarkan nama kebun
+    // Group data berdasarkan nama kebun dengan pengurutan
     groupedData() {
       const groups = {};
       
-      this.filteredData.forEach(row => {
+      // Sort data by kebun name (A-Z) first, then by afdeling number (1-3)
+      const sortedData = [...this.filteredData].sort((a, b) => {
+        // First sort by kebun name
+        if (a.kebun < b.kebun) return -1;
+        if (a.kebun > b.kebun) return 1;
+        
+        // If kebun is the same, sort by afdeling number
+        const afdA = parseInt(a.afdeling) || 0;
+        const afdB = parseInt(b.afdeling) || 0;
+        return afdA - afdB;
+      });
+      
+      sortedData.forEach(row => {
         if (!groups[row.kebun]) {
           groups[row.kebun] = [];
         }
@@ -741,22 +757,6 @@ export default {
       });
       
       return groups;
-    },
-
-    // CHANGE: NEW computed property for formatted grid data
-    gridData() {
-      const groups = this.paginatedGroupedData;
-      const formattedGroups = {};
-
-      for (const kebunName in groups) {
-        formattedGroups[kebunName] = groups[kebunName.map(row => ({
-          ...row,
-          // Format the date here
-          tanggalSPPBJ: this.formatDate(row.tanggalSPPBJ)
-        }))];
-      }
-      
-      return formattedGroups;
     },
 
     // Calculate pagination values
@@ -833,11 +833,9 @@ export default {
     
     filteredTotalLuasPaket() {
       if (!this.filteredData || !this.filteredData.length) {
-        // Return a string with two decimal places for consistency
         return "0.00"; 
       }
       const total = this.filteredData.reduce((sum, row) => sum + (parseFloat(row.luas) || 0), 0);
-      // Format the final total to two decimal places
       return total.toFixed(2);
     },
     
@@ -849,8 +847,7 @@ export default {
     
     filteredAvgProgress() {
       if (!this.filteredData || !this.filteredData.length) {
-        // Return a string with two decimal places for consistency
-        return "0.00"; 
+        return 0; // Return number instead of string
       }
       
       const totalProgress = this.filteredData.reduce((total, row) => {
@@ -860,8 +857,8 @@ export default {
       
       const average = totalProgress / this.filteredData.length;
       
-      // Format the average to two decimal places and return it
-      return average.toFixed(2);
+      // Return number instead of string
+      return average;
     },
         
     avgProgressYesterday() {
@@ -902,7 +899,6 @@ export default {
     },
     
     filteredProgressChange() {
-      // FIX: Added null checks to prevent NaN
       const today = parseFloat(this.filteredAvgProgress) || 0;
       const yesterday = this.filteredAvgProgressYesterday || 0;
       return today - yesterday;
@@ -955,7 +951,7 @@ export default {
       ];
     },
     
-    // CHANGE: Refactored BarChart Data to prevent merging
+    // PERBAIKAN: Refactored BarChart Data untuk menampilkan progress bar yang benar
     barChartData() {
       if (!this.filteredData || !this.filteredData.length) {
         return {
@@ -966,21 +962,40 @@ export default {
             backgroundColor: 'rgba(16, 185, 129, 0.5)',
             borderColor: 'rgba(16, 185, 129, 1)',
             borderWidth: 1
-          }]
+          }],
+          options: {
+            scales: {
+              y: {
+                min: 0,
+                max: 100,
+                ticks: {
+                  stepSize: 20,
+                  callback: function(value) {
+                    return value + '%';
+                  },
+                  precision: 0
+                }
+              }
+            }
+          }
         };
       }
       
       const dataPoints = [];
       const labels = [];
+      const luasPaketArray = [];
       
       // CHANGE: Iterate directly over filteredData to avoid merging
-      this.filteredData.forEach((row, index) => {
+      this.filteredData.forEach((row) => {
         const avgProgress = parseFloat(row.progressOverall) || 0;
         dataPoints.push(avgProgress);
         
         // Format label: Kebun - AFD X - Vendor Name
         const label = `${row.kebun} - AFD ${row.afdeling} - ${row.namaVendor}`;
         labels.push(label);
+        
+        // Tambahkan luas paket untuk tooltip
+        luasPaketArray.push(parseFloat(row.luas) || 0);
       });
       
       return {
@@ -990,31 +1005,20 @@ export default {
           data: dataPoints,
           backgroundColor: 'rgba(16, 185, 129, 0.5)',
           borderColor: 'rgba(16, 185, 129, 1)',
-          borderWidth: 1
+          borderWidth: 1,
+          luasPaket: luasPaketArray
         }],
         options: {
           scales: {
             y: {
-              beginAtZero: true,
+              min: 0,
               max: 100,
               ticks: {
+                stepSize: 20,
                 callback: function(value) {
                   return value + '%';
-                }
-              }
-            }
-          },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return `Progress: ${context.parsed.y.toFixed(2)}%`;
                 },
-                afterLabel: function(context) {
-                  // CHANGE: Access luas directly from the original filteredData
-                  const luas = context.chart.data.filteredData[context.dataIndex].luas || 0;
-                  return `Luas: ${parseFloat(luas).toFixed(2)} ha`;
-                }
+                precision: 0
               }
             }
           }
@@ -1022,7 +1026,7 @@ export default {
       };
     },
     
-    // CHANGE: Refactored Pie Chart with Needle Data to prevent merging
+    // PERBAIKAN: Refactored Pie Chart with Needle Data
     pieWithNeedleChartData() {
       if (!this.filteredData || !this.filteredData.length) {
         return {
@@ -1074,7 +1078,6 @@ export default {
       };
     },
     
-// CHANGE: Refactored Radar Chart Data to prevent merging and fix tooltip
 radarChartData() {
   if (!this.filteredData || !this.filteredData.length) {
     return [];
@@ -1089,152 +1092,157 @@ radarChartData() {
     'Tumbang/Chipping',
     'Menanam Mucuna',
     'Lubang Tanam KS',
-    'Mempupuk Lubang KS',
+    'memupuk Lubang KS',
     'Menanam KS'
   ];
   
   const chartsData = [];
   
-  // CHANGE: Iterate directly over filteredData to create a chart for each row
-  this.filteredData.forEach((row, rowIndex) => {
-    // --- START OF DEBUGGING LOGS ---
-    console.log(`--- Processing Row ${rowIndex} for Radar Chart ---`);
-    console.log('Full Row Object:', row);
-
-    // Check if the main activity objects exist
-    if (!row.pembuatanParit || !row.pembuatanJalan || !row.pembuatanTeras || !row.ripping || !row.luku || !row.tumbangChipping || !row.menanamMucuna || !row.lubangTanamKS || !row.mempupukLubangKS || !row.menanamKS) {
-      console.warn('One or more main activity objects are missing for this row:', row);
-      // If a main activity object is missing, we can't proceed, so skip this row for the chart.
-      return; 
+  // Group data by vendor or kebun based on filters
+  const groupedData = {};
+  
+  this.filteredData.forEach(row => {
+    let key;
+    if (this.filters.kebun && this.filters.namaVendor) {
+      key = row.afdeling;
+    } else if (this.filters.namaVendor) {
+      key = `${row.kebun} - ${row.afdeling}`;
+    } else if (this.filters.kebun) {
+      key = `${row.afdeling} - ${row.namaVendor}`;
+    } else {
+      key = row.namaVendor;
     }
-    // --- END OF DEBUGGING LOGS ---
-
-    const activities = [
-      { name: 'Pembuatan Parit', data: [] },
-      { name: 'Pembuatan Jalan', data: [] },
-      { name: 'Pembuatan Teras', data: [] },
-      { name: 'Ripping', data: [] },
-      { name: 'Luku', data: [] },
-      { name: 'Tumbang/Chipping', data: [] },
-      { name: 'Menanam Mucuna', data: [] },
-      { name: 'Lubang Tanam KS', data: [] },
-      { name: 'Mempupuk Lubang KS', data: [] },
-      { name: 'Menanam KS', data: [] }
-    ];
     
-    // CHANGE: Prepare detailInfo for tooltip
-    const detailInfo = [];
-
-    // Calculate percentage for each activity and populate detailInfo
-    const calculatePercentageWithZeroCheck = (current, target) => {
-      if (target === 0) return 100;
-      return this.calculatePercentage(current, target);
+    if (!groupedData[key]) {
+      groupedData[key] = [];
+    }
+    
+    groupedData[key].push(row);
+  });
+  
+  // Create radar charts for each group
+  Object.keys(groupedData).forEach(key => {
+    const totalData = {
+      pembuatanParit: { rencana: 0, sdHariIni: 0 },
+      pembuatanJalan: { rencana: 0, sdHariIni: 0 },
+      pembuatanTeras: { rencana: 0, sdHariIni: 0 },
+      ripping: { rencana: 0, sdHariIni: 0 },
+      luku: { rencana: 0, sdHariIni: 0 },
+      tumbangChipping: { rencana: 0, sdHariIni: 0 },
+      menanamMucuna: { rencana: 0, sdHariIni: 0 },
+      lubangTanamKS: { rencana: 0, sdHariIni: 0 },
+      memupukLubangKS: { rencana: 0, sdHariIni: 0 },
+      menanamKS: { rencana: 0, sdHariIni: 0 }
     };
     
-    // --- START OF ACTIVITY 1: Pembuatan Parit ---
-    const paritData = row.pembuatanParit;
-    console.log('Activity 1 - Pembuatan Parit Data:', paritData);
-
-    const paritRencana = this.getProgressData(paritData, 'rencana');
-    const paritRealisasi = this.getProgressData(paritData, 'sdHariIni');
-    const paritPersentase = calculatePercentageWithZeroCheck(paritRealisasi, paritRencana);
-
-    console.log(`Parit -> Rencana: ${paritRencana}, Realisasi: ${paritRealisasi}, Persentase: ${paritPersentase}`);
-    
-    detailInfo.push({
-      name: 'Pembuatan Parit', 
-      rencana: paritRencana,
-      realisasi: paritRealisasi
+    // Loop untuk menjumlahkan SEMUA data 'rencana' dan 'sdHariIni' di dalam grup
+    groupedData[key].forEach(row => {
+      totalData.pembuatanParit.rencana += this.getProgressData(row.pembuatanParit, 'rencana');
+      totalData.pembuatanParit.sdHariIni += this.getProgressData(row.pembuatanParit, 'sdHariIni');
+      
+      totalData.pembuatanJalan.rencana += this.getProgressData(row.pembuatanJalan, 'rencana');
+      totalData.pembuatanJalan.sdHariIni += this.getProgressData(row.pembuatanJalan, 'sdHariIni');
+      
+      totalData.pembuatanTeras.rencana += this.getProgressData(row.pembuatanTeras, 'rencana');
+      totalData.pembuatanTeras.sdHariIni += this.getProgressData(row.pembuatanTeras, 'sdHariIni');
+      
+      totalData.ripping.rencana += this.getProgressData(row.ripping, 'rencana');
+      totalData.ripping.sdHariIni += this.getProgressData(row.ripping, 'sdHariIni');
+      
+      totalData.luku.rencana += this.getProgressData(row.luku, 'rencana');
+      totalData.luku.sdHariIni += this.getProgressData(row.luku, 'sdHariIni');
+      
+      totalData.tumbangChipping.rencana += this.getProgressData(row.tumbangChipping, 'rencana');
+      totalData.tumbangChipping.sdHariIni += this.getProgressData(row.tumbangChipping, 'sdHariIni');
+      
+      totalData.menanamMucuna.rencana += this.getProgressData(row.menanamMucuna, 'rencana');
+      totalData.menanamMucuna.sdHariIni += this.getProgressData(row.menanamMucuna, 'sdHariIni');
+      
+      totalData.lubangTanamKS.rencana += this.getProgressData(row.lubangTanamKS, 'rencana');
+      totalData.lubangTanamKS.sdHariIni += this.getProgressData(row.lubangTanamKS, 'sdHariIni');
+      
+      totalData.memupukLubangKS.rencana += this.getProgressData(row.memupukLubangKS, 'rencana');
+      totalData.memupukLubangKS.sdHariIni += this.getProgressData(row.memupukLubangKS, 'sdHariIni');
+      
+      totalData.menanamKS.rencana += this.getProgressData(row.menanamKS, 'rencana');
+      totalData.menanamKS.sdHariIni += this.getProgressData(row.menanamKS, 'sdHariIni');
     });
-    activities[0].data.push(paritPersentase);
-    // --- END OF ACTIVITY 1 ---
-
-
-    // --- START OF ACTIVITY 2: Pembuatan Jalan ---
-    const jalanData = row.pembuatanJalan;
-    const jalanRencana = this.getProgressData(jalanData, 'rencana');
-    const jalanRealisasi = this.getProgressData(jalanData, 'sdHariIni');
-    const jalanPersentase = calculatePercentageWithZeroCheck(jalanRealisasi, jalanRencana);
-
-    console.log(`Jalan -> Rencana: ${jalanRencana}, Realisasi: ${jalanRealisasi}, Persentase: ${jalanPersentase}`);
-
-    detailInfo.push({
-      name: 'Pembuatan Jalan', 
-      rencana: jalanRencana,
-      realisasi: jalanRealisasi
-    });
-    activities[1].data.push(jalanPersentase);
-    // --- END OF ACTIVITY 2 ---
-
-
-    // ... (Repeat this logging block for all 10 activities) ...
-    // For brevity, I will show the pattern for the rest. You should copy this for all activities.
     
-    // --- START OF ACTIVITY 3: Pembuatan Teras ---
-    const terasData = row.pembuatanTeras;
-    const terasRencana = this.getProgressData(terasData, 'rencana');
-    const terasRealisasi = this.getProgressData(terasData, 'sdHariIni');
-    const terasPersentase = calculatePercentageWithZeroCheck(terasRealisasi, terasRencana);
+    // --- PERUBAHAN: Hitung persentase dengan LOGIKA BARU ---
+    const activityData = [
+      // Jika rencana 0, anggap progress 100%
+      (totalData.pembuatanParit.rencana === 0) ? 100 : this.calculatePercentage(totalData.pembuatanParit.sdHariIni, totalData.pembuatanParit.rencana),
+      (totalData.pembuatanJalan.rencana === 0) ? 100 : this.calculatePercentage(totalData.pembuatanJalan.sdHariIni, totalData.pembuatanJalan.rencana),
+      (totalData.pembuatanTeras.rencana === 0) ? 100 : this.calculatePercentage(totalData.pembuatanTeras.sdHariIni, totalData.pembuatanTeras.rencana),
+      (totalData.ripping.rencana === 0) ? 100 : this.calculatePercentage(totalData.ripping.sdHariIni, totalData.ripping.rencana),
+      (totalData.luku.rencana === 0) ? 100 : this.calculatePercentage(totalData.luku.sdHariIni, totalData.luku.rencana),
+      (totalData.tumbangChipping.rencana === 0) ? 100 : this.calculatePercentage(totalData.tumbangChipping.sdHariIni, totalData.tumbangChipping.rencana),
+      (totalData.menanamMucuna.rencana === 0) ? 100 : this.calculatePercentage(totalData.menanamMucuna.sdHariIni, totalData.menanamMucuna.rencana),
+      (totalData.lubangTanamKS.rencana === 0) ? 100 : this.calculatePercentage(totalData.lubangTanamKS.sdHariIni, totalData.lubangTanamKS.rencana),
+      (totalData.memupukLubangKS.rencana === 0) ? 100 : this.calculatePercentage(totalData.memupukLubangKS.sdHariIni, totalData.memupukLubangKS.rencana),
+      (totalData.menanamKS.rencana === 0) ? 100 : this.calculatePercentage(totalData.menanamKS.sdHariIni, totalData.menanamKS.rencana)
+    ];
 
-    console.log(`Teras -> Rencana: ${terasRencana}, Realisasi: ${terasRealisasi}, Persentase: ${terasPersentase}`);
-
-    detailInfo.push({
-      name: 'Pembuatan Teras', 
-      rencana: terasRencana,
-      realisasi: terasRealisasi
-    });
-    activities[2].data.push(terasPersentase);
-    // --- END OF ACTIVITY 3 ---
-    
-    // --- START OF ACTIVITY 4: Ripping ---
-    const rippingData = row.ripping;
-    const rippingRencana = this.getProgressData(rippingData, 'rencana');
-    const rippingRealisasi = this.getProgressData(rippingData, 'sdHariIni');
-    const rippingPersentase = calculatePercentageWithZeroCheck(rippingRealisasi, rippingRencana);
-
-    console.log(`Ripping -> Rencana: ${rippingRencana}, Realisasi: ${rippingRealisasi}, Persentase: ${rippingPersentase}`);
-
-    detailInfo.push({
-      name: 'Ripping', 
-      rencana: rippingRencana,
-      realisasi: rippingRealisasi
-    });
-    activities[3].data.push(rippingPersentase);
-    // --- END OF ACTIVITY 4 ---
-
-    // ... (Continue this pattern for 'Luku', 'Tumbang/Chipping', 'Menanam Mucuna', 'Lubang Tanam KS', 'Mempupuk Lubang KS', 'Menanam KS')
-    
-    // Example for the last one, 'Menanam KS':
-    const ksData = row.menanamKS;
-    const ksRencana = this.getProgressData(ksData, 'rencana');
-    const ksRealisasi = this.getProgressData(ksData, 'sdHariIni');
-    const ksPersentase = calculatePercentageWithZeroCheck(ksRealisasi, ksRencana);
-
-    console.log(`Menanam KS -> Rencana: ${ksRencana}, Realisasi: ${ksRealisasi}, Persentase: ${ksPersentase}`);
-
-    detailInfo.push({
-      name: 'Menanam KS', 
-      rencana: ksRencana,
-      realisasi: ksRealisasi
-    });
-    activities[9].data.push(ksPersentase);
-    // --- END OF ACTIVITY 10 ---
-    
-    // Final log of the complete detailInfo array that will be passed to the tooltip
-    console.log('Final detailInfo array for tooltip:', detailInfo);
-
-    // Calculate average for each activity (will be the same as the single value)
-    const activityData = activities.map(activity => activity.data[0] || 0);
-    
-    // Format title: Kebun - AFD X - Vendor Name
-    const title = `${row.kebun} - AFD ${row.afdeling} - ${row.namaVendor}`;
+    // --- PERUBAHAN: Buat detailInfo untuk RadarChart.vue ---
+    const detailInfo = [
+      { 
+        name: 'Pembuatan Parit', 
+        rencana: totalData.pembuatanParit.rencana,
+        realisasi: totalData.pembuatanParit.sdHariIni
+      },
+      { 
+        name: 'Pembuatan Jalan', 
+        rencana: totalData.pembuatanJalan.rencana,
+        realisasi: totalData.pembuatanJalan.sdHariIni
+      },
+      { 
+        name: 'Pembuatan Teras', 
+        rencana: totalData.pembuatanTeras.rencana,
+        realisasi: totalData.pembuatanTeras.sdHariIni
+      },
+      { 
+        name: 'Ripping', 
+        rencana: totalData.ripping.rencana,
+        realisasi: totalData.ripping.sdHariIni
+      },
+      { 
+        name: 'Luku', 
+        rencana: totalData.luku.rencana,
+        realisasi: totalData.luku.sdHariIni
+      },
+      { 
+        name: 'Tumbang/Chipping', 
+        rencana: totalData.tumbangChipping.rencana,
+        realisasi: totalData.tumbangChipping.sdHariIni
+      },
+      { 
+        name: 'Menanam Mucuna', 
+        rencana: totalData.menanamMucuna.rencana,
+        realisasi: totalData.menanamMucuna.sdHariIni
+      },
+      { 
+        name: 'Lubang Tanam KS', 
+        rencana: totalData.lubangTanamKS.rencana,
+        realisasi: totalData.lubangTanamKS.sdHariIni
+      },
+      { 
+        name: 'memupuk Lubang KS', 
+        rencana: totalData.memupukLubangKS.rencana,
+        realisasi: totalData.memupukLubangKS.sdHariIni
+      },
+      { 
+        name: 'Menanam KS', 
+        rencana: totalData.menanamKS.rencana,
+        realisasi: totalData.menanamKS.sdHariIni
+      }
+    ];
     
     chartsData.push({
-      title: title,
+      title: key,
       data: {
         labels: activityLabels,
         datasets: [{
-          label: 'Progress (%)',
+          label: 'Progress Total (%)',
           data: activityData,
           backgroundColor: 'rgba(59, 130, 246, 0.2)',
           borderColor: 'rgba(59, 130, 246, 1)',
@@ -1242,8 +1250,7 @@ radarChartData() {
           pointBorderColor: '#fff',
           pointHoverBackgroundColor: '#fff',
           pointHoverBorderColor: 'rgba(59, 130, 246, 1)',
-          // CHANGE: Add detailInfo to the dataset for the tooltip
-          tooltipData: detailInfo
+          detailInfo: detailInfo
         }]
       },
       options: {
@@ -1258,34 +1265,6 @@ radarChartData() {
               }
             }
           }
-        },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const dataIndex = context.dataIndex;
-                const tooltipItem = context.dataset.tooltipData[dataIndex];
-                
-                // Get the rencana and realisasi values
-                const rencana = tooltipItem.rencana;
-                const realisasi = tooltipItem.realisasi;
-                
-                // If rencana is 0, show a special message
-                if (rencana === 0) {
-                  return [
-                    `${context.label}: 100% (Tidak ada rencana untuk aktivitas ini)`
-                  ];
-                }
-                
-                // Otherwise, show the normal tooltip
-                return [
-                  `${context.label}: ${context.parsed.r.toFixed(2)}%`,
-                  `Rencana: ${rencana}`,
-                  `Realisasi: ${realisasi}`
-                ];
-              }
-            }
-          }
         }
       }
     });
@@ -1293,6 +1272,7 @@ radarChartData() {
   
   return chartsData;
 },
+    
     // Ranking Data
     topRankingData() {
       if (!this.filteredData || !this.filteredData.length) return [];
@@ -1461,7 +1441,7 @@ radarChartData() {
         { name: 'Tumbang/Chipping', field: 'tumbangChipping' },
         { name: 'Menanam Mucuna', field: 'menanamMucuna' },
         { name: 'Lubang Tanam KS', field: 'lubangTanamKS' },
-        { name: 'Mempupuk Lubang KS', field: 'mempupukLubangKS' },
+        { name: 'memupuk Lubang KS', field: 'memupukLubangKS' },
         { name: 'Menanam KS', field: 'menanamKS' }
       ];
       
@@ -1515,9 +1495,12 @@ radarChartData() {
     
     // Metode baru untuk mengambil data progress dengan aman
     getProgressData(progressObj, field) {
+      // Check if progressObj exists and is an object
       if (!progressObj || typeof progressObj !== 'object') {
         return 0;
       }
+      
+      // Return the requested field or 0 if it doesn't exist
       return progressObj[field] || 0;
     },
     
@@ -1861,7 +1844,7 @@ radarChartData() {
         tumbangChipping: row.tumbangChipping,
         menanamMucuna: row.menanamMucuna,
         lubangTanamKS: row.lubangTanamKS,
-        mempupukLubangKS: row.mempupukLubangKS,
+        memupukLubangKS: row.memupukLubangKS,
         menanamKS: row.menanamKS,
         luas: row.luas
       }));
